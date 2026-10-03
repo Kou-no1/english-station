@@ -1084,6 +1084,16 @@
     .signal-pattern { font-size: 72px; }
     .segmented button, .pill-tabs button, .word-block { min-height: 44px; }
     #save-notice { color: var(--gold); }
+    .sky-word-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; margin-top: 12px; }
+    .sky-word { min-height: 64px; padding: 6px; display: grid; justify-items: center; gap: 4px; font-size: 12px; }
+    .sky-word .word-art { font-size: 25px; }
+    .sky-word.earned { border-color: var(--gold); }
+    .badge-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .badge { color: var(--gold); font-size: 13px; }
+    dialog { width: min(500px, calc(100% - 24px)); max-height: calc(100dvh - 32px); overflow-y: auto; background: #142337; color: var(--text); border: 1px solid var(--line-strong); border-radius: 8px; padding: 20px; }
+    dialog::backdrop { background: rgba(0, 0, 0, 0.7); }
+    .dialog-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .dialog-head h2 { margin: 0; font-size: 22px; }
     @media (max-width: 980px) {
       .app-header { grid-template-columns: 1fr auto; }
       .status-strip { grid-column: 1 / -1; grid-row: 2; }
@@ -1196,6 +1206,7 @@
     <p class="footer-note">記録はこの端末に残ります。</p>
   </div>
 
+  <dialog id="word-dialog" aria-labelledby="word-dialog-title"></dialog>
   <script>
     const STORAGE_KEY = "interstellar_english_progress_v1";
 
@@ -1473,6 +1484,7 @@
       talkTurn: 0,
       talkLog: [],
       talkFinished: false,
+      skyCategory: "animals",
       gachaLast: null,
       gachaSpinning: false,
       gachaTimer: null,
@@ -1804,6 +1816,9 @@
               </div>
             </div>
             ${renderSkyMap()}
+            <div class="pill-tabs">${availableCategories().map(category => `<button type="button" data-sky-category="${category.id}" aria-pressed="${ui.skyCategory === category.id}">${escapeHtml(category.label)}</button>`).join("")}</div>
+            ${renderSkyWords()}
+            <div class="badge-list">${state.vocab.categoriesComplete.map(id => vocabCategories.find(category => category.id === id)).filter(Boolean).map(category => `<span class="badge">★ ${escapeHtml(category.label)}星座</span>`).join("")}</div>
             <div class="map-note">
               <div class="stat-box"><b>${progress.totals.vocab[0]}</b><span>確定した星</span></div>
               <div class="stat-box"><b>${state.vocab.categoriesComplete.length}</b><span>完成した星座</span></div>
@@ -1815,23 +1830,46 @@
       `);
     }
 
+    function constellationPoints(category) {
+      const shapes = [ [[0.1,0.5],[0.35,0.1],[0.55,0.65],[0.85,0.3],[0.7,0.9],[0.1,0.5]], [[0.1,0.75],[0.2,0.1],[0.4,0.6],[0.6,0.1],[0.8,0.75],[0.1,0.75]], [[0.1,0.25],[0.85,0.25],[0.7,0.8],[0.3,0.8],[0.1,0.25]], [[0.1,0.7],[0.5,0.15],[0.9,0.7],[0.7,0.7],[0.7,0.95],[0.3,0.95],[0.3,0.7],[0.1,0.7]], [[0.1,0.3],[0.9,0.3],[0.65,0.6],[0.9,0.9],[0.1,0.9],[0.35,0.6],[0.1,0.3]] ];
+      const index = vocabCategories.findIndex(item => item.id === category.id);
+      const shape = shapes[index % shapes.length];
+      return category.words.map((_, wordIndex) => {
+        const position = wordIndex * (shape.length - 1) / category.words.length;
+        const segment = Math.floor(position);
+        const fraction = position - segment;
+        const a = shape[segment], b = shape[segment + 1];
+        return [30 + (index % 5) * 190 + (a[0] + (b[0] - a[0]) * fraction) * 150, 45 + Math.floor(index / 5) * 210 + (a[1] + (b[1] - a[1]) * fraction) * 140];
+      });
+    }
+
+    function renderSkyWords() {
+      const categories = availableCategories();
+      const category = categories.find(item => item.id === ui.skyCategory) || categories[0];
+      if (!category) return "";
+      ui.skyCategory = category.id;
+      return `<div class="sky-word-grid">${category.words.map(word => `<button type="button" class="sky-word ${state.vocab.mastered.includes(word.id) ? "earned" : ""}" data-sky-word="${word.id}">${wordArt(word)}<span>${escapeHtml(word.ja)} ${state.vocab.mastered.includes(word.id) ? "★" : ""}</span></button>`).join("")}</div>`;
+    }
+
+    function showSkyWord(id) {
+      const word = availableWords().find(item => item.id === id);
+      if (!word) return;
+      const record = state.vocab.records[id];
+      const dialog = document.getElementById("word-dialog");
+      dialog.innerHTML = `<div class="dialog-head"><h2 id="word-dialog-title">${escapeHtml(word.ja)}</h2><button type="button" class="icon-button" data-close-dialog="word-dialog" aria-label="閉じる" title="閉じる">×</button></div><div class="flash-card"><div class="big-icon">${wordArt(word)}</div>${state.settings.subtitles ? `<h3 class="word-en">${escapeHtml(word.en)}</h3>` : ""}<p>${state.vocab.mastered.includes(id) ? "獲得した星" : "練習中の星"}</p><p>正解 ${record?.correct || 0}回${record ? `・${record.dueAt <= Date.now() ? "今日の復習" : "次の復習 " + new Date(record.dueAt).toLocaleDateString("ja-JP")}` : ""}</p><button type="button" class="gold-button" data-speak="${escapeHtml(word.en)}">▶ 聞く</button></div>`;
+      dialog.showModal();
+      speak(word.en);
+    }
+
     function renderSkyMap() {
       const categories = availableCategories();
-      const points = [
-        [[54, 78], [118, 48], [178, 104], [236, 72], [292, 124], [358, 86]],
-        [[76, 220], [132, 170], [198, 206], [260, 168], [326, 220], [390, 174]],
-        [[62, 348], [126, 312], [190, 354], [248, 304], [314, 344], [378, 300]],
-        [[450, 92], [520, 48], [584, 112], [646, 78], [708, 124], [760, 70]],
-        [[458, 252], [526, 204], [590, 262], [650, 218], [716, 270], [770, 226]],
-        [[452, 382], [516, 334], [580, 382], [642, 332], [708, 378], [764, 328]]
-      ];
-      const groups = categories.map((category, index) => {
-        const categoryPoints = points[index] || points[0];
+      const groups = categories.map(category => {
+        const categoryPoints = constellationPoints(category);
         const words = category.words;
         const complete = words.every(word => state.vocab.mastered.includes(word.id));
         const line = categoryPoints.map(point => point.join(",")).join(" ");
         const circles = words.map((word, wordIndex) => {
-          const point = categoryPoints[wordIndex % categoryPoints.length];
+          const point = categoryPoints[wordIndex];
           const mastered = state.vocab.mastered.includes(word.id);
           return `<circle cx="${point[0]}" cy="${point[1]}" r="${mastered ? 6 : 4}" fill="${mastered ? category.color : "rgba(244,247,251,0.22)"}" stroke="${mastered ? "#fff" : "rgba(244,247,251,0.25)"}" stroke-width="1">
             <title>${escapeHtml(word.en)} ${mastered ? "習得済み" : "未習得"}</title>
@@ -1843,7 +1881,7 @@
           <text x="${categoryPoints[0][0] - 10}" y="${categoryPoints[0][1] - 16}" fill="${complete ? category.color : "rgba(244,247,251,0.55)"}" font-size="15" font-family="system-ui, sans-serif">${escapeHtml(category.label)}</text>
         `;
       }).join("");
-      return `<svg viewBox="0 0 820 450" role="img" aria-label="自分の星図">${groups}</svg>`;
+      return `<svg viewBox="0 0 1000 ${Math.max(260, Math.ceil(vocabCategories.length / 5) * 210 + 30)}" role="img" aria-label="自分の星図">${groups}</svg>`;
     }
 
     function renderVocab() {
@@ -2473,6 +2511,9 @@
         return;
       }
       if (target.dataset.signal) { playSignal(target.dataset.signal); return; }
+      if (target.dataset.skyCategory) { ui.skyCategory = target.dataset.skyCategory; renderHome(); return; }
+      if (target.dataset.skyWord) { showSkyWord(target.dataset.skyWord); return; }
+      if (target.dataset.closeDialog) { stopAudio(); document.getElementById(target.dataset.closeDialog).close(); return; }
       if (target.hasAttribute("data-start-review")) { const due = dueWords(); if (!due.length) return; ui.reviewQueue = due.map(word => word.id); ui.reviewing = true; ui.reviewFinished = false; ui.vocabMode = "quiz"; ui.vocabQuiz = null; setView("vocab"); return; }
       if (target.hasAttribute("data-end-review")) { ui.reviewing = false; ui.reviewQueue = []; renderVocab(); return; }
       if (target.hasAttribute("data-toggle-subtitles")) { state.settings.subtitles = !state.settings.subtitles; saveState(); render(); return; }

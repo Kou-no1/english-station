@@ -189,3 +189,13 @@ test('every Small Talk topic completes a multi-turn exchange in both roles', () 
     assert.ok(f.run('ui.talkLog.length') >= 4);
   }
 });
+
+test('constellation positions are distinct and stay fixed across grade modes', () => {
+  const f = fixture();
+  const before = f.run('JSON.stringify(constellationPoints(vocabCategories.find(c=>c.id==="actions_feelings")))');
+  f.run('state.gradeMode="3-4"');
+  assert.equal(f.run('JSON.stringify(constellationPoints(vocabCategories.find(c=>c.id==="actions_feelings")))'), before);
+  for (const category of f.run('vocabCategories.map(c=>c.id)')) {
+    assert.equal(f.run(`new Set(constellationPoints(vocabCategories.find(c=>c.id===${JSON.stringify(category)})).map(p=>p.join(","))).size`), f.run(`vocabCategories.find(c=>c.id===${JSON.stringify(category)}).words.length`));
+  }
+});
