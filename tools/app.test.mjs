@@ -209,3 +209,29 @@ test('drawing alone is not mastery and scene practice awards a badge', () => {
   assert.equal(f.run('state.gacha.practiced.length'), 1);
   assert.equal(f.run('state.gacha.badges.includes("greeting")'), true);
 });
+
+test('export and import preserve learning records and reject unrelated files', () => {
+  const f = fixture();
+  f.run('markWord("num_one",true);state.gacha.collected=["expr_hello"];recordExpressionPractice("expr_hello");state.settings.rate=0.7');
+  const exported = f.run('exportProgress()');
+  const restored = f.run(`parseProgressImport(${JSON.stringify(exported)})`);
+  assert.equal(restored.vocab.records.num_one.correct, 1);
+  assert.equal(restored.settings.rate, 0.7);
+  assert.deepEqual(Array.from(restored.gacha.practiced), ['expr_hello']);
+  assert.throws(() => f.run('parseProgressImport("{\"app\":\"other\"}")'));
+  assert.throws(() => f.run('parseProgressImport("[]")'));
+  assert.throws(() => f.run('parseProgressImport("{}")'));
+  assert.throws(() => f.run('parseProgressImport("not json")'));
+});
+
+test('progress replacement clears in-flight exercises and pending awards', () => {
+  const f = fixture();
+  f.run('ui.activeView="gacha";renderGacha()');
+  f.click({}, ['data-gacha-draw']);
+  const stale = [...f.timers.values()][0].fn;
+  f.run('replaceProgress(freshState())');
+  stale();
+  assert.equal(f.run('state.gacha.collected.length'), 0);
+  assert.equal(f.run('ui.talkTurn'), 0);
+  assert.equal(f.run('ui.vocabQuiz'), null);
+});

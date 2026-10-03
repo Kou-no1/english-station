@@ -1098,6 +1098,19 @@
     dialog::backdrop { background: rgba(0, 0, 0, 0.7); }
     .dialog-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 12px; }
     .dialog-head h2 { margin: 0; font-size: 22px; }
+    .settings-grid { display: grid; gap: 16px; }
+    .settings-grid label { display: grid; gap: 6px; }
+    .settings-grid .check-label { display: flex; gap: 10px; align-items: center; min-height: 44px; }
+    .settings-grid input[type="checkbox"] { width: 22px; height: 22px; }
+    .settings-grid input[type="range"] { width: 100%; min-height: 44px; }
+    select { min-height: 44px; max-width: 100%; padding: 8px; color: var(--text); background: #102037; border: 1px solid var(--line-strong); border-radius: 4px; }
+    .projection .status-strip, .projection aside { display: none; }
+    .projection .layout { grid-template-columns: 1fr; }
+    .projection .word-en { font-size: 72px; }
+    .projection .signal-pattern { font-size: 96px; }
+    .projection .choice-button { min-height: 120px; font-size: 22px; }
+    .projection .dialogue-line strong, .projection .word-block { font-size: 22px; }
+    @media (max-width: 620px) { .projection .word-en { font-size: 40px; } .projection .signal-pattern { font-size: 60px; } }
     @media (max-width: 980px) {
       .app-header { grid-template-columns: 1fr auto; }
       .status-strip { grid-column: 1 / -1; grid-row: 2; }
@@ -1171,7 +1184,8 @@
           <button type="button" id="grade-56" data-grade="5-6">5・6年</button>
         </div>
         <button type="button" class="icon-button" data-toggle-subtitles title="字幕" aria-label="字幕を切り替える">文</button>
-        <button type="button" class="icon-button" id="reset-button" title="進捗をリセット" aria-label="進捗をリセット">↻</button>
+        <button type="button" class="icon-button" data-stop-audio title="音声を止める" aria-label="音声を止める">■</button>
+        <button type="button" class="icon-button" id="teacher-button" title="先生用設定" aria-label="先生用設定">⚙</button>
       </div>
     </header>
 
@@ -1211,6 +1225,9 @@
   </div>
 
   <dialog id="word-dialog" aria-labelledby="word-dialog-title"></dialog>
+  <dialog id="teacher-dialog" aria-labelledby="teacher-dialog-title"></dialog>
+  <dialog id="import-dialog" aria-labelledby="import-dialog-title"></dialog>
+  <input type="file" id="progress-file" accept="application/json,.json" hidden>
   <script>
     const STORAGE_KEY = "interstellar_english_progress_v1";
 
@@ -1473,6 +1490,7 @@
       reviewQueue: [],
       reviewing: false,
       reviewFinished: false,
+      pendingImport: null,
       vocabQuiz: null,
       phonicsLevel: 1,
       phonicsIndex: 0,
@@ -1504,7 +1522,7 @@
         version: 2,
         gradeMode: "5-6",
         rankHighWater: 0,
-        settings: { rate: 0.85, subtitles: true, projection: false },
+        settings: { rate: 0.85, subtitles: true, projection: false, voiceA: "", voiceB: "" },
         phonics: { mastered: [] },
         vocab: { mastered: [], streaks: {}, misses: {}, records: {}, categoriesComplete: [] },
         smalltalk: { completedTopics: [], reactions: [], sessions: {} },
@@ -1542,6 +1560,8 @@
       result.gacha.badges = [...new Set(expressions.map(expr => expr.scene))].filter(scene => expressions.filter(expr => expr.scene === scene).every(expr => result.gacha.practiced.includes(expr.id)));
       if ([0.7, 0.85, 1].includes(parsed.settings?.rate)) result.settings.rate = parsed.settings.rate;
       if (typeof parsed.settings?.subtitles === "boolean") result.settings.subtitles = parsed.settings.subtitles;
+      for (const key of ["voiceA", "voiceB"]) if (typeof parsed.settings?.[key] === "string") result.settings[key] = parsed.settings[key].slice(0, 200);
+      if (typeof parsed.settings?.projection === "boolean") result.settings.projection = parsed.settings.projection;
       return result;
     }
 
@@ -1674,7 +1694,7 @@
       utterance.rate = state.settings.rate;
       utterance.pitch = speaker === "B" ? 1.08 : 1;
       const voices = window.speechSynthesis.getVoices().filter(item => item.lang.startsWith("en"));
-      const voice = voices[speaker === "B" && voices.length > 1 ? 1 : 0];
+      const voice = voices.find(item => item.name === state.settings[speaker === "B" ? "voiceB" : "voiceA"]) || voices[speaker === "B" && voices.length > 1 ? 1 : 0];
       if (voice) utterance.voice = voice;
       return new Promise(resolve => {
         audioSession.resolve = resolve;
@@ -1701,7 +1721,7 @@
     }
 
     if ("speechSynthesis" in window) {
-      window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+      window.speechSynthesis.onvoiceschanged = () => { if (document.getElementById("teacher-dialog").open) renderTeacherSettings(); };
     }
 
     function setFeedback(message, tone = "", slot = "main") {
@@ -1778,6 +1798,7 @@
     }
 
     function render() {
+      document.body?.classList.toggle("projection", state.settings.projection);
       updateStatus();
       renderHome();
       if (ui.activeView === "vocab") renderVocab();
@@ -2470,12 +2491,63 @@
       ui.gachaSpinning = false;
     }
 
-    function resetAll() {
-      const ok = window.confirm("この端末に保存された星間通信局の進捗をリセットします。よろしいですか？");
-      if (!ok) return;
+    function exportProgress() {
+      return JSON.stringify({ app: "interstellar-english", formatVersion: 2, exportedAt: new Date().toISOString(), progress: state }, null, 2);
+    }
+
+    function parseProgressImport(text) {
+      if (text.length > 1000000) throw new Error("記録ファイルが大きすぎます。");
+      const parsed = JSON.parse(text);
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("英語学習の記録ではありません。");
+      if (parsed.app !== undefined && parsed.app !== "interstellar-english") throw new Error("別のアプリの記録です。");
+      if (parsed.formatVersion !== undefined && ![1, 2].includes(parsed.formatVersion)) throw new Error("この記録の形式には対応していません。");
+      const progress = parsed.progress || parsed;
+      if (!["3-4", "5-6"].includes(progress.gradeMode)) throw new Error("学年の記録を確認してください。");
+      for (const [department, field] of [["phonics", "mastered"], ["vocab", "mastered"], ["smalltalk", "completedTopics"], ["gacha", "collected"]]) {
+        const values = progress[department]?.[field];
+        if (!Array.isArray(values) || values.some(id => typeof id !== "string")) throw new Error("学習の記録が正しくありません。");
+      }
+      return normalizeState(progress);
+    }
+
+    function replaceProgress(next) {
       stopAudio();
       cancelWarp();
-      const next = freshState();
+      Object.assign(state, normalizeState(next));
+      ui.vocabCategory = "numbers_colors";
+      ui.vocabIndex = 0;
+      ui.vocabQuiz = null;
+      ui.vocabRevealed = false;
+      ui.vocabAnswered = false;
+      ui.vocabRecent = [];
+      ui.vocabVisited = [];
+      ui.reviewing = false;
+      ui.reviewQueue = [];
+      ui.reviewFinished = false;
+      ui.phonicsLevel = 1;
+      ui.phonicsIndex = 0;
+      ui.phonicsQuiz = null;
+      ui.buildId = "";
+      ui.gachaLast = null;
+      ui.sceneQuiz = null;
+      ui.feedback = {};
+      resetTalk("greeting");
+      saveState();
+      render();
+    }
+
+    function renderTeacherSettings() {
+      const voices = window.speechSynthesis?.getVoices().filter(voice => voice.lang.startsWith("en")) || [];
+      const options = selected => `<option value="">自動</option>${voices.map(voice => `<option value="${escapeHtml(voice.name)}" ${voice.name === selected ? "selected" : ""}>${escapeHtml(voice.name)} (${escapeHtml(voice.lang)})</option>`).join("")}`;
+      document.getElementById("teacher-dialog").innerHTML = `<div class="dialog-head"><h2 id="teacher-dialog-title">先生用設定</h2><button type="button" class="icon-button" data-close-dialog="teacher-dialog" aria-label="閉じる" title="閉じる">×</button></div><div class="settings-grid"><label>再生速度 <output id="speed-label">${state.settings.rate}x</output><input type="range" id="speech-speed" min="0" max="2" step="1" value="${[0.7, 0.85, 1].indexOf(state.settings.rate)}"></label><label class="check-label"><input type="checkbox" data-setting="subtitles" ${state.settings.subtitles ? "checked" : ""}>英語の字幕</label><label class="check-label"><input type="checkbox" data-setting="projection" ${state.settings.projection ? "checked" : ""}>投影モード</label><label>Aの声<select data-setting="voiceA">${options(state.settings.voiceA)}</select></label><label>Bの声<select data-setting="voiceB">${options(state.settings.voiceB)}</select></label><div class="button-row"><button type="button" class="secondary-button" data-export-progress>↓ 記録を書き出す</button><button type="button" class="secondary-button" data-import-progress>↑ 記録を読み込む</button></div><p id="teacher-status" role="status"></p><details><summary>フォニックスの音声確認</summary><div class="pill-tabs">${phonicsItems.map(item => `<button type="button" data-signal="${item.id}">${escapeHtml(item.pattern)}</button>`).join("")}</div></details><button type="button" class="danger-button" id="reset-button">進捗をリセット</button></div>`;
+    }
+
+    function resetAll() {
+      const ok = window.confirm("この端末に保存された星間通信局の進捗をリセットします。よろしいですか？");
+      if (!ok) return false;
+      stopAudio();
+      cancelWarp();
+      const next = { ...freshState(), gradeMode: state.gradeMode, settings: { ...state.settings } };
       Object.keys(state).forEach(key => delete state[key]);
       Object.assign(state, next);
       ui.vocabIndex = 0;
@@ -2497,6 +2569,7 @@
       ui.buildId = "";
       saveState();
       render();
+      return true;
     }
 
     document.addEventListener("click", event => {
@@ -2536,7 +2609,7 @@
         return;
       }
       if (target.id === "reset-button") {
-        resetAll();
+        if (resetAll()) document.getElementById("teacher-dialog").close();
         return;
       }
       if (target.dataset.speak) {
@@ -2544,6 +2617,12 @@
         return;
       }
       if (target.dataset.signal) { playSignal(target.dataset.signal); return; }
+      if (target.hasAttribute("data-stop-audio")) { stopAudio(); return; }
+      if (target.id === "teacher-button") { renderTeacherSettings(); document.getElementById("teacher-dialog").showModal(); return; }
+      if (target.hasAttribute("data-export-progress")) { const url = URL.createObjectURL(new Blob([exportProgress()], { type: "application/json" })); const link = document.createElement("a"); link.href = url; link.download = "interstellar-english-progress.json"; link.click(); URL.revokeObjectURL(url); return; }
+      if (target.hasAttribute("data-import-progress")) { document.getElementById("progress-file").click(); return; }
+      if (target.hasAttribute("data-confirm-import")) { if (!ui.pendingImport) return; replaceProgress(ui.pendingImport); ui.pendingImport = null; document.getElementById("import-dialog").close(); renderTeacherSettings(); document.getElementById("teacher-dialog").showModal(); document.getElementById("teacher-status").textContent = "記録を読み込みました。"; return; }
+      if (target.hasAttribute("data-cancel-import")) { ui.pendingImport = null; document.getElementById("import-dialog").close(); renderTeacherSettings(); document.getElementById("teacher-dialog").showModal(); return; }
       if (target.dataset.skyCategory) { ui.skyCategory = target.dataset.skyCategory; renderHome(); return; }
       if (target.dataset.skyWord) { showSkyWord(target.dataset.skyWord); return; }
       if (target.dataset.closeDialog) { stopAudio(); document.getElementById(target.dataset.closeDialog).close(); return; }
@@ -2735,6 +2814,38 @@
         saveState();
         speak(target.dataset.reaction);
         setFeedback(`${target.dataset.reaction} をストックしました。`, "good");
+      }
+    });
+
+    document.addEventListener("input", event => {
+      if (event.target.id !== "speech-speed") return;
+      state.settings.rate = [0.7, 0.85, 1][Number(event.target.value)] || 0.85;
+      stopAudio();
+      saveState();
+      document.getElementById("speed-label").textContent = `${state.settings.rate}x`;
+    });
+
+    document.addEventListener("change", async event => {
+      const target = event.target;
+      if (["subtitles", "projection", "voiceA", "voiceB"].includes(target.dataset.setting)) {
+        const key = target.dataset.setting;
+        state.settings[key] = ["subtitles", "projection"].includes(key) ? target.checked : target.value;
+        stopAudio();
+        saveState();
+        render();
+      }
+      if (target.id === "progress-file") {
+        const file = target.files?.[0];
+        if (!file) return;
+        try {
+          if (file.size > 1000000) throw new Error("記録ファイルが大きすぎます。");
+          ui.pendingImport = parseProgressImport(await file.text());
+          const next = ui.pendingImport;
+          document.getElementById("import-dialog").innerHTML = `<div class="dialog-head"><h2 id="import-dialog-title">記録の読み込み</h2></div><p>${next.gradeMode === "3-4" ? "3・4年" : "5・6年"}・星 ${next.vocab.mastered.length}・交信 ${next.smalltalk.completedTopics.length}・カード ${next.gacha.collected.length}</p><p>この端末の現在の記録を置き換えます。</p><div class="button-row"><button type="button" class="gold-button" data-confirm-import>読み込む</button><button type="button" class="secondary-button" data-cancel-import>やめる</button></div>`;
+          document.getElementById("teacher-dialog").close();
+          document.getElementById("import-dialog").showModal();
+        } catch (error) { document.getElementById("teacher-status").textContent = error instanceof SyntaxError ? "JSON形式の記録を選んでください。" : error.message; }
+        target.value = "";
       }
     });
 
