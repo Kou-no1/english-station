@@ -1090,6 +1090,10 @@
     .sky-word.earned { border-color: var(--gold); }
     .badge-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
     .badge { color: var(--gold); font-size: 13px; }
+    .collection-item { text-align: left; width: 100%; }
+    .scene-picture { font-size: 56px; line-height: 1.3; text-align: center; }
+    .scene-choice { display: grid; grid-template-columns: 44px 1fr; gap: 6px; align-items: stretch; }
+    .scene-choice .choice-button { min-height: 70px; font-size: 16px; }
     dialog { width: min(500px, calc(100% - 24px)); max-height: calc(100dvh - 32px); overflow-y: auto; background: #142337; color: var(--text); border: 1px solid var(--line-strong); border-radius: 8px; padding: 20px; }
     dialog::backdrop { background: rgba(0, 0, 0, 0.7); }
     .dialog-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 12px; }
@@ -1486,6 +1490,8 @@
       talkFinished: false,
       skyCategory: "animals",
       gachaLast: null,
+      gachaFlipped: false,
+      gachaSort: "rarity",
       gachaSpinning: false,
       gachaTimer: null,
       gachaGeneration: 0,
@@ -1502,7 +1508,7 @@
         phonics: { mastered: [] },
         vocab: { mastered: [], streaks: {}, misses: {}, records: {}, categoriesComplete: [] },
         smalltalk: { completedTopics: [], reactions: [], sessions: {} },
-        gacha: { collected: [] }
+        gacha: { collected: [], practiced: [], badges: [] }
       };
     }
 
@@ -1532,6 +1538,8 @@
       result.smalltalk.reactions = ids(parsed.smalltalk?.reactions, reactions);
       result.smalltalk.sessions = counts(parsed.smalltalk?.sessions, smallTalkTopics.map(topic => topic.id));
       result.gacha.collected = ids(parsed.gacha?.collected, expressions.map(expr => expr.id));
+      result.gacha.practiced = ids(parsed.gacha?.practiced, result.gacha.collected);
+      result.gacha.badges = [...new Set(expressions.map(expr => expr.scene))].filter(scene => expressions.filter(expr => expr.scene === scene).every(expr => result.gacha.practiced.includes(expr.id)));
       if ([0.7, 0.85, 1].includes(parsed.settings?.rate)) result.settings.rate = parsed.settings.rate;
       if (typeof parsed.settings?.subtitles === "boolean") result.settings.subtitles = parsed.settings.subtitles;
       return result;
@@ -1611,7 +1619,7 @@
       const topics = availableSmallTalk();
       const talkDone = topics.filter(topic => state.smalltalk.completedTopics.includes(topic.id)).length;
       const exprs = availableExpressions();
-      const gachaDone = exprs.filter(expr => state.gacha.collected.includes(expr.id)).length;
+      const gachaDone = exprs.filter(expr => state.gacha.practiced.includes(expr.id)).length;
       const byDept = {
         phonics: percent(phDone, phTotal),
         vocab: percent(vocabDone, words.length),
@@ -2066,12 +2074,14 @@
       const exprs = availableExpressions();
       const last = exprs.find(expr => expr.id === ui.gachaLast?.id) || exprs.find(expr => state.gacha.collected.includes(expr.id));
       const collected = exprs.filter(expr => state.gacha.collected.includes(expr.id));
-      const collection = exprs.map(expr => `
-        <div class="collection-item">
+      const ordered = [...exprs].sort((a, b) => ui.gachaSort === "rarity" ? ["super", "rare", "common"].indexOf(a.rarity) - ["super", "rare", "common"].indexOf(b.rarity) : ui.gachaSort === "scene" ? a.scene.localeCompare(b.scene) : state.gacha.collected.indexOf(b.id) - state.gacha.collected.indexOf(a.id));
+      const collection = ordered.map(expr => `
+        <button type="button" class="collection-item" data-collection-card="${expr.id}" ${state.gacha.collected.includes(expr.id) ? "" : "disabled"}>
           <span class="rarity ${expr.rarity}">${rarityLabel(expr.rarity)}</span>
-          <h4>${state.gacha.collected.includes(expr.id) ? escapeHtml(expr.en) : "未発見"}</h4>
+          <h4>${state.gacha.collected.includes(expr.id) ? escapeHtml(state.settings.subtitles ? expr.en : expr.ja) : "未発見"}</h4>
           <p>${state.gacha.collected.includes(expr.id) ? escapeHtml(expr.ja) : escapeHtml(expr.prompt)}</p>
-        </div>
+          <span>${state.gacha.practiced.includes(expr.id) ? "★ 練習済み" : state.gacha.collected.includes(expr.id) ? "発見済み" : ""}</span>
+        </button>
       `).join("");
 
       renderInto("view-gacha", `
@@ -2080,7 +2090,7 @@
             <h2>表現探査課</h2>
             <p>ワープ通信で表現カードを集め、場面に合う言い方を選びます。</p>
           </div>
-          <span class="chip"><strong>${collected.length}</strong> / ${exprs.length} collected</span>
+          <span class="chip">発見 ${collected.length}/${exprs.length}・練習 ${exprs.filter(expr => state.gacha.practiced.includes(expr.id)).length}</span>
         </div>
         <div class="layout">
           <section class="panel gacha-stage">
@@ -2091,7 +2101,8 @@
           </section>
           <aside class="panel panel-pad">
             <h3>探査記録</h3>
-            <p>集めた表現は図鑑に残ります。</p>
+            <div class="pill-tabs" style="margin:10px 0">${[["rarity", "レア度"], ["scene", "場面"], ["discovery", "発見順"]].map(([id, label]) => `<button type="button" data-gacha-sort="${id}" aria-pressed="${ui.gachaSort === id}">${label}</button>`).join("")}</div>
+            <div class="badge-list">${state.gacha.badges.map(scene => `<span class="badge">★ ${sceneLabel(scene)}</span>`).join("")}</div>
             <div class="collection-grid">${collection}</div>
           </aside>
         </div>
@@ -2113,10 +2124,11 @@
         <article class="expression-card">
           <span class="rarity ${expr.rarity}">${rarityLabel(expr.rarity)}</span>
           <h3>${escapeHtml(state.settings.subtitles ? expr.en : expr.ja)}</h3>
-          <p>${escapeHtml(expr.ja)}</p>
-          <p>${escapeHtml(expr.prompt)}</p>
+          ${ui.gachaFlipped ? `<div class="scene-picture" aria-hidden="true">${sceneIcon(expr.scene)}</div><p>${escapeHtml(expr.ja)}</p><p>${escapeHtml(expr.prompt)}</p>` : ""}
           <div class="button-row" style="justify-content:flex-start">
             <button type="button" class="icon-button" data-speak="${escapeHtml(expr.en)}" title="音声を聞く" aria-label="音声を聞く">▶</button>
+            <button type="button" class="secondary-button" data-flip-expression>${ui.gachaFlipped ? "表へ" : "裏へ"}</button>
+            <button type="button" class="violet-button" data-practice-expression="${expr.id}">使ってみよう</button>
           </div>
         </article>
       `;
@@ -2135,9 +2147,29 @@
       return weighted[Math.floor(Math.random() * weighted.length)];
     }
 
-    function ensureSceneQuiz() {
+    function sceneIcon(scene) {
+      return { greeting: "👋", thanks: "🎁", attention: "🙋", farewell: "👋", shopping: "🛒", question: "🔎", invite: "⚽", future: "🎉", offer: "🫖", opinion: "💬", directions: "🧭", school: "🏫", feelings: "😄" }[scene] || "💬";
+    }
+
+    function sceneLabel(scene) {
+      return { greeting: "あいさつ", thanks: "お礼", attention: "声かけ", farewell: "わかれ", shopping: "買い物", question: "質問", invite: "おさそい", future: "楽しみ", offer: "おすすめ", opinion: "考え", directions: "道案内", school: "学校", feelings: "気持ち" }[scene] || scene;
+    }
+
+    function recordExpressionPractice(id) {
+      if (!state.gacha.collected.includes(id)) return;
+      uniquePush(state.gacha.practiced, id);
+      for (const scene of new Set(expressions.map(expr => expr.scene))) {
+        if (expressions.filter(expr => expr.scene === scene).every(expr => state.gacha.practiced.includes(expr.id))) uniquePush(state.gacha.badges, scene);
+      }
+      saveState();
+      updateStatus();
+    }
+
+    function ensureSceneQuiz(preferredId) {
       const exprs = availableExpressions();
-      const answer = exprs[Math.floor(Math.random() * exprs.length)];
+      const collected = exprs.filter(expr => state.gacha.collected.includes(expr.id));
+      if (!collected.length) { ui.sceneQuiz = null; return; }
+      const answer = collected.find(expr => expr.id === preferredId) || collected[Math.floor(Math.random() * collected.length)];
       const choices = shuffle([answer, ...shuffle(exprs.filter(expr => expr.id !== answer.id)).slice(0, 2)]);
       ui.sceneQuiz = { answer: answer.id, prompt: answer.prompt, choices, selected: null };
     }
@@ -2145,14 +2177,15 @@
     function renderSceneQuiz() {
       if (!ui.sceneQuiz) ensureSceneQuiz();
       const quiz = ui.sceneQuiz;
-      const choices = quiz.choices.map(expr => {
+      if (!quiz) return `<p>未発見</p>`;
+      const choices = quiz.choices.map((expr, index) => {
         const selected = quiz.selected === expr.id;
         const correct = selected && expr.id === quiz.answer;
         const wrong = selected && expr.id !== quiz.answer;
-        return `<button type="button" class="choice-button ${correct ? "correct" : ""} ${wrong ? "wrong" : ""}" data-scene-choice="${expr.id}">${escapeHtml(expr.en)}</button>`;
+        return `<div class="scene-choice"><button type="button" class="icon-button" data-speak="${escapeHtml(expr.en)}" aria-label="候補${index + 1}の声を聞く" title="候補の声を聞く">▶</button><button type="button" class="choice-button ${correct ? "correct" : ""} ${wrong ? "wrong" : ""}" data-scene-choice="${expr.id}" ${quiz.selected ? "disabled" : ""}>${state.settings.subtitles ? escapeHtml(expr.en) : String.fromCharCode(65 + index)}</button></div>`;
       }).join("");
       return `
-        <p><strong>${escapeHtml(quiz.prompt)}</strong></p>
+        <div class="scene-picture" aria-hidden="true">${sceneIcon(expressions.find(expr => expr.id === quiz.answer).scene)}</div><p><strong>${escapeHtml(quiz.prompt)}</strong></p>
         <div class="quiz-grid">${choices}</div>
         <div class="button-row" style="margin-top:10px; justify-content:flex-start">
           <button type="button" class="secondary-button" data-scene-next>次の場面</button>
@@ -2582,8 +2615,10 @@
           if (generation !== ui.gachaGeneration) return;
           ui.gachaTimer = null;
           ui.gachaLast = expr;
+          ui.gachaFlipped = false;
           ui.gachaSpinning = false;
           uniquePush(state.gacha.collected, expr.id);
+          ensureSceneQuiz(expr.id);
           saveState();
           renderGacha();
           setFeedback(`${expr.en} を記録しました。`, "good");
@@ -2592,17 +2627,24 @@
         return;
       }
       if (target.dataset.sceneChoice) {
+        if (!ui.sceneQuiz || ui.sceneQuiz.selected) return;
         const correct = target.dataset.sceneChoice === ui.sceneQuiz.answer;
         ui.sceneQuiz.selected = target.dataset.sceneChoice;
+        if (correct) recordExpressionPractice(ui.sceneQuiz.answer);
         renderGacha();
         setFeedback(correct ? "場面に合っています。" : "別の表現を探してみよう。", correct ? "good" : "bad", "scene");
         return;
       }
       if (target.hasAttribute("data-scene-next")) {
         ui.sceneQuiz = null;
+        delete ui.feedback["gacha:scene"];
         renderGacha();
         return;
       }
+      if (target.dataset.gachaSort) { ui.gachaSort = target.dataset.gachaSort; renderGacha(); return; }
+      if (target.hasAttribute("data-flip-expression")) { ui.gachaFlipped = !ui.gachaFlipped; renderGacha(); return; }
+      if (target.dataset.collectionCard) { const expr = availableExpressions().find(item => item.id === target.dataset.collectionCard && state.gacha.collected.includes(item.id)); if (!expr) return; ui.gachaLast = expr; ui.gachaFlipped = true; renderGacha(); speak(expr.en); return; }
+      if (target.dataset.practiceExpression) { ensureSceneQuiz(target.dataset.practiceExpression); delete ui.feedback["gacha:scene"]; renderGacha(); document.querySelector('[data-feedback="scene"]')?.closest("section")?.scrollIntoView({ block: "center" }); return; }
 
       if (target.dataset.phonicsLevel) {
         ui.phonicsLevel = Number(target.dataset.phonicsLevel);

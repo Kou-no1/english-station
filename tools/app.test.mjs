@@ -171,7 +171,7 @@ test('scheduler covers the category before starting a new cycle', () => {
 
 test('earned rank never drops when the grade mode changes', () => {
   const f = fixture();
-  f.run('state.gradeMode="3-4";state.phonics.mastered=availablePhonics().map(x=>x.id);state.vocab.mastered=availableWords().map(x=>x.id);state.smalltalk.completedTopics=availableSmallTalk().map(x=>x.id);state.gacha.collected=availableExpressions().map(x=>x.id);updateStatus()');
+  f.run('state.gradeMode="3-4";state.phonics.mastered=availablePhonics().map(x=>x.id);state.vocab.mastered=availableWords().map(x=>x.id);state.smalltalk.completedTopics=availableSmallTalk().map(x=>x.id);state.gacha.collected=availableExpressions().map(x=>x.id);state.gacha.practiced=[...state.gacha.collected];updateStatus()');
   assert.equal(f.run('rankName(state.rankHighWater)'), '星間大使');
   f.click({ grade: '5-6' });
   assert.equal(f.run('rankName(state.rankHighWater)'), '星間大使');
@@ -198,4 +198,14 @@ test('constellation positions are distinct and stay fixed across grade modes', (
   for (const category of f.run('vocabCategories.map(c=>c.id)')) {
     assert.equal(f.run(`new Set(constellationPoints(vocabCategories.find(c=>c.id===${JSON.stringify(category)})).map(p=>p.join(","))).size`), f.run(`vocabCategories.find(c=>c.id===${JSON.stringify(category)}).words.length`));
   }
+});
+
+test('drawing alone is not mastery and scene practice awards a badge', () => {
+  const f = fixture();
+  f.run('state.gacha.collected=["expr_hello"];ensureSceneQuiz("expr_hello")');
+  assert.equal(f.run('getProgress().byDept.gacha'), 0);
+  f.click({ sceneChoice: 'expr_hello' });
+  f.click({ sceneChoice: 'expr_hello' });
+  assert.equal(f.run('state.gacha.practiced.length'), 1);
+  assert.equal(f.run('state.gacha.badges.includes("greeting")'), true);
 });
