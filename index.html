@@ -1420,6 +1420,14 @@
 
     const reactions = ["Really?", "Me too!", "That's nice.", "How about you?", "Good idea.", "I see."];
 
+    const talkPractice = {
+      greeting: { question: "Hello. I'm Sora. What's your name?", model: "I'm Mina.", followups: [["Nice to meet you.", "Nice to meet you, too."]] },
+      likes: { question: "What do you like?", model: "I like soccer.", followups: [["Do you like music?", "Yes, I do."], ["Do you like apples?", "Yes, I do."]] },
+      daily_routine: { question: "What time do you get up?", model: "I get up at 7:00.", followups: [["What time do you go to bed?", "I go to bed at 9:00."], ["What time do you eat breakfast?", "I eat breakfast at 7:30."]] },
+      can_do: { question: "Can you swim?", model: "Yes, I can. I can swim well.", followups: [["Can you play soccer?", "Yes, I can."], ["Can you cook curry?", "No, I can't."]] },
+      future_dream: { question: "What do you want to be?", model: "I want to be a teacher.", followups: [["Why?", "I like helping people."], ["Do you like children?", "Yes, I do."]] }
+    };
+
     const expressions = [
       { id: "expr_hello", rarity: "common", grade: ["3-4", "5-6"], en: "Hello!", ja: "こんにちは", scene: "greeting", prompt: "友だちに会ったとき" },
       { id: "expr_thanks", rarity: "common", grade: ["3-4", "5-6"], en: "Thank you.", ja: "ありがとう", scene: "thanks", prompt: "何かをしてもらったとき" },
@@ -1461,6 +1469,10 @@
       buildId: "",
       smallTalkTopic: "greeting",
       selectedBlocks: {},
+      talkRole: "B",
+      talkTurn: 0,
+      talkLog: [],
+      talkFinished: false,
       gachaLast: null,
       gachaSpinning: false,
       gachaTimer: null,
@@ -1477,7 +1489,7 @@
         settings: { rate: 0.85, subtitles: true, projection: false },
         phonics: { mastered: [] },
         vocab: { mastered: [], streaks: {}, misses: {}, records: {}, categoriesComplete: [] },
-        smalltalk: { completedTopics: [], reactions: [] },
+        smalltalk: { completedTopics: [], reactions: [], sessions: {} },
         gacha: { collected: [] }
       };
     }
@@ -1506,6 +1518,7 @@
       result.vocab.categoriesComplete = vocabCategories.filter(category => category.words.every(word => result.vocab.mastered.includes(word.id))).map(category => category.id);
       result.smalltalk.completedTopics = ids(parsed.smalltalk?.completedTopics, smallTalkTopics.map(topic => topic.id));
       result.smalltalk.reactions = ids(parsed.smalltalk?.reactions, reactions);
+      result.smalltalk.sessions = counts(parsed.smalltalk?.sessions, smallTalkTopics.map(topic => topic.id));
       result.gacha.collected = ids(parsed.gacha?.collected, expressions.map(expr => expr.id));
       if ([0.7, 0.85, 1].includes(parsed.settings?.rate)) result.settings.rate = parsed.settings.rate;
       if (typeof parsed.settings?.subtitles === "boolean") result.settings.subtitles = parsed.settings.subtitles;
@@ -1700,6 +1713,8 @@
 
     function choiceCaption(text) {
       if (state.gradeMode === "5-6" || state.settings.subtitles) return text;
+      const questions = { "Hello. I'm Sora. What's your name?": "こんにちは。なまえは？", "What do you like?": "なにがすき？", "Do you like music?": "おんがくはすき？", "Do you like apples?": "りんごはすき？" };
+      if (questions[text]) return questions[text];
       const captions = { "I": "わたしは", "like": "すき", "Hello.": "こんにちは", "Hi.": "やあ", "Good morning.": "おはよう", "I'm Sora.": "ソラ", "I'm Mina.": "ミナ", "I'm Ren.": "レン", "Nice to meet you.": "はじめまして", "How about you?": "きみは？", "Me too!": "わたしも！", "That's nice.": "いいね", "Really?": "ほんとう？", "Good idea.": "いいかんがえ", "I see.": "なるほど", "soccer.": "サッカー", "apples.": "りんご", "music.": "おんがく" };
       return captions[text] || availableWords().find(word => word.en === text.replace(/[.!?]$/, ""))?.ja || text;
     }
@@ -2218,11 +2233,48 @@
       renderPhonics();
     }
 
+    function resetTalk(topicId = ui.smallTalkTopic) {
+      stopAudio();
+      ui.smallTalkTopic = topicId;
+      ui.selectedBlocks = {};
+      ui.talkTurn = 0;
+      ui.talkLog = [];
+      ui.talkFinished = false;
+      delete ui.feedback["smalltalk:main"];
+    }
+
+    function talkRound(topic) {
+      const practice = talkPractice[topic.id];
+      const answerBlocks = Object.fromEntries(Object.entries(topic.blocks).filter(([group]) => group !== "bridge"));
+      const greeting = topic.id === "greeting";
+      if (ui.talkRole === "A") {
+        if (ui.talkTurn === 0) return { label: "はなしかける", prompt: practice.question, blocks: { question: [practice.question] }, response: practice.model };
+        if (ui.talkTurn === 1) return { label: "リアクション", prompt: practice.model, blocks: { reaction: greeting ? ["Nice to meet you."] : ["Really?", "That's nice.", "I see."] }, response: greeting ? "Nice to meet you, too." : "How about you?" };
+        return { label: "じぶんのこと", prompt: "How about you?", blocks: answerBlocks, validReplies: topic.validReplies, response: "Thank you." };
+      }
+      if (ui.talkTurn === 0) return { label: "こたえる", prompt: practice.question, blocks: answerBlocks, validReplies: topic.validReplies, response: practice.model };
+      if (greeting) return { label: "あいさつをつなぐ", prompt: practice.model, blocks: { followup: practice.followups.map(pair => pair[0]) } };
+      if (ui.talkTurn === 1) {
+        const own = ui.talkLog.find(line => line.speaker === "B")?.en;
+        const choices = ["Really?", "That's nice.", "I see."];
+        if (own === practice.model) choices.push("Me too!");
+        return { label: "リアクション", prompt: practice.model, blocks: { reaction: choices } };
+      }
+      return { label: "ききかえす", prompt: practice.model, blocks: { followup: practice.followups.map(pair => pair[0]) } };
+    }
+
+    function blockOptions(round, group) {
+      if (!round.validReplies) return round.blocks[group];
+      const groups = Object.keys(round.blocks);
+      const index = groups.indexOf(group);
+      const replies = round.validReplies.filter(reply => groups.slice(0, index).every((previous, previousIndex) => !ui.selectedBlocks[previous] || ui.selectedBlocks[previous] === reply[previousIndex]));
+      return [...new Set(replies.map(reply => reply[index]))];
+    }
+
     function renderSmallTalk() {
       const topics = availableSmallTalk();
       if (!topics.some(topic => topic.id === ui.smallTalkTopic)) {
-        ui.smallTalkTopic = topics[0]?.id || "";
-        ui.selectedBlocks = {};
+        resetTalk(topics[0]?.id || "");
       }
       const topic = topics.find(item => item.id === ui.smallTalkTopic);
       const topicButtons = topics.map(item => `
@@ -2258,6 +2310,8 @@
     }
 
     function renderTalkTopic(topic) {
+      const round = talkRound(topic);
+      const totalTurns = topic.id === "greeting" ? 2 : 3;
       const lines = topic.exchange.map(line => `
         <div class="dialogue-line">
           <span class="speaker-badge">${escapeHtml(line.speaker)}</span>
@@ -2265,31 +2319,31 @@
           <button type="button" class="icon-button" data-speak="${escapeHtml(line.en)}" aria-label="この英文を聞く">▶</button>
         </div>
       `).join("");
-      const blocks = Object.entries(topic.blocks).map(([group, options]) => `
+      const blocks = Object.entries(round.blocks).map(([group]) => `
         <div class="block-group">
-          <strong>${escapeHtml({ greeting: "あいさつ", name: "なまえ", closing: "さいごに", subject: "だれ", verb: "すること", topic: "すきなもの", bridge: "ききかえす", time: "じこく", answer: "こたえ", detail: "くわしく", phrase: "なりたい", job: "しごと" }[group] || group)}</strong>
+          <strong>${escapeHtml({ greeting: "あいさつ", name: "なまえ", closing: "さいごに", subject: "だれ", verb: "すること", topic: "すきなもの", bridge: "ききかえす", time: "じこく", answer: "こたえ", detail: "くわしく", phrase: "なりたい", job: "しごと", question: "しつもん", reaction: "リアクション", followup: "つなぎのひとこと" }[group] || group)}</strong>
           <div class="block-options">
-            ${options.map(option => `<button type="button" class="word-block ${ui.selectedBlocks[group] === option ? "active" : ""}" aria-pressed="${ui.selectedBlocks[group] === option}" data-block-group="${escapeHtml(group)}" data-block-value="${escapeHtml(option)}">${escapeHtml(choiceCaption(option))}</button>`).join("")}
+            ${blockOptions(round, group).map(option => `<button type="button" class="word-block ${ui.selectedBlocks[group] === option ? "active" : ""}" aria-pressed="${ui.selectedBlocks[group] === option}" data-block-group="${escapeHtml(group)}" data-block-value="${escapeHtml(option)}">${escapeHtml(choiceCaption(option))}</button>`).join("")}
           </div>
         </div>
       `).join("");
-      const answer = Object.keys(topic.blocks).map(group => ui.selectedBlocks[group]).filter(Boolean).join(" ");
+      const answer = Object.keys(round.blocks).map(group => ui.selectedBlocks[group]).filter(Boolean).join(" ");
       const reactionCards = reactions.map(text => `<button type="button" class="reaction-card" data-reaction="${escapeHtml(text)}">${escapeHtml(choiceCaption(text))}</button>`).join("");
       return `
         <h3>${escapeHtml(topic.label)}</h3>
-        <p>${escapeHtml(topic.planet)} と交信します。</p>
-        <div class="line-stack" style="margin-top:12px">${lines}</div>
-        <div class="button-row" style="justify-content:flex-start; margin-top:10px">
-          <button type="button" class="warm-button" data-play-dialogue="${escapeHtml(topic.id)}">モデル交信を再生</button>
-        </div>
-        <div class="block-builder">
+        <div class="pill-tabs" style="margin-top:10px"><button type="button" data-talk-role="A" aria-pressed="${ui.talkRole === "A"}" class="${ui.talkRole === "A" ? "active" : ""}">A・はなしかける</button><button type="button" data-talk-role="B" aria-pressed="${ui.talkRole === "B"}" class="${ui.talkRole === "B" ? "active" : ""}">B・こたえる</button></div>
+        <details style="margin-top:12px"><summary>モデル交信</summary><div class="line-stack">${lines}</div><button type="button" class="warm-button" data-play-dialogue="${escapeHtml(topic.id)}">▶ 再生</button></details>
+        <p>${escapeHtml(topic.planet)}・${ui.talkFinished ? "交信完了" : `${round.label} ${ui.talkTurn + 1}/${totalTurns}`}</p>
+        <div class="dialogue-line"><span class="speaker-badge">${ui.talkRole === "A" ? "B" : "A"}</span><strong>${state.settings.subtitles ? escapeHtml(round.prompt) : "▶"}</strong><button type="button" class="icon-button" data-speak="${escapeHtml(round.prompt)}" title="相手の声" aria-label="相手の声を聞く">▶</button></div>
+        ${ui.talkLog.length ? `<details open><summary>交信ログ ${ui.talkLog.length}</summary><div class="line-stack">${ui.talkLog.map(line => `<div class="dialogue-line"><span class="speaker-badge">${line.speaker}</span><strong>${state.settings.subtitles ? escapeHtml(line.en) : "▶"}</strong><button type="button" class="icon-button" data-speak="${escapeHtml(line.en)}" aria-label="この声を聞く">▶</button></div>`).join("")}</div></details>` : ""}
+        ${ui.talkFinished ? `<button type="button" class="warm-button" data-restart-talk>もう一度交信する</button>` : `<div class="block-builder">
           ${blocks}
-          <div class="answer-line">${escapeHtml(answer ? Object.keys(topic.blocks).map(group => ui.selectedBlocks[group]).filter(Boolean).map(choiceCaption).join(" ") : "へんとう")}</div>
+          <div class="answer-line">${escapeHtml(answer ? Object.keys(round.blocks).map(group => ui.selectedBlocks[group]).filter(Boolean).map(choiceCaption).join(" ") : "へんとう")}</div>
           <div class="button-row" style="justify-content:flex-start">
             <button type="button" class="warm-button" data-send-talk="${escapeHtml(topic.id)}">送信する</button>
             <button type="button" class="secondary-button" data-clear-talk>消す</button>
           </div>
-        </div>
+        </div>`}
         <h3 style="margin-top:18px">つなぎの一言</h3>
         <div class="reaction-row">${reactionCards}</div>
         <div class="feedback" aria-live="polite"></div>
@@ -2305,20 +2359,35 @@
     }
 
     function sendTalk(topic) {
-      const groups = Object.keys(topic.blocks);
+      if (ui.talkFinished || topic.id !== ui.smallTalkTopic) return;
+      const round = talkRound(topic);
+      const groups = Object.keys(round.blocks);
       const answer = groups.map(group => ui.selectedBlocks[group]).filter(Boolean).join(" ");
       if (groups.some(group => !ui.selectedBlocks[group])) {
         setFeedback("すべてのブロックを1つずつ選びます。", "bad");
         return;
       }
-      if (groups.some(group => !topic.blocks[group].includes(ui.selectedBlocks[group])) || (topic.validReplies && !topic.validReplies.some(reply => reply.every((part, index) => part === ui.selectedBlocks[groups[index]])))) {
+      if (groups.some(group => !blockOptions(round, group).includes(ui.selectedBlocks[group])) || (round.validReplies && !round.validReplies.some(reply => reply.every((part, index) => part === ui.selectedBlocks[groups[index]])))) {
         setFeedback("質問に合うブロックを選んでみよう。", "bad");
         return;
       }
-      uniquePush(state.smalltalk.completedTopics, topic.id);
-      saveState();
-      speak(answer);
-      setFeedback(`${topic.planet} との交信に成功しました。`, "good");
+      const practice = talkPractice[topic.id];
+      const response = round.response || practice.followups.find(pair => pair[0] === ui.selectedBlocks.followup)?.[1];
+      ui.talkLog.push({ speaker: ui.talkRole, en: answer });
+      if (response) ui.talkLog.push({ speaker: ui.talkRole === "A" ? "B" : "A", en: response });
+      ui.talkTurn++;
+      ui.selectedBlocks = {};
+      const totalTurns = topic.id === "greeting" ? 2 : 3;
+      if (ui.talkTurn >= totalTurns) {
+        ui.talkFinished = true;
+        uniquePush(state.smalltalk.completedTopics, topic.id);
+        state.smalltalk.sessions[topic.id] = (state.smalltalk.sessions[topic.id] || 0) + 1;
+        saveState();
+      }
+      stopAudio();
+      const epoch = audioSession.epoch;
+      (async () => { if (await speak(answer, "en-US", ui.talkRole, true) && response && epoch === audioSession.epoch) await speak(response, "en-US", ui.talkRole === "A" ? "B" : "A", true); })();
+      setFeedback(ui.talkFinished ? `${topic.planet} との交信に成功しました。` : "受信成功。交信をつづけよう。", "good");
       updateStatus();
       renderSmallTalk();
     }
@@ -2350,6 +2419,7 @@
       ui.phonicsIndex = 0;
       ui.phonicsQuiz = null;
       ui.selectedBlocks = {};
+      resetTalk();
       ui.gachaLast = null;
       ui.sceneQuiz = null;
       ui.feedback = {};
@@ -2389,6 +2459,7 @@
         ui.phonicsIndex = 0;
         ui.phonicsQuiz = null;
         ui.selectedBlocks = {};
+        resetTalk();
         ui.sceneQuiz = null;
         render();
         return;
@@ -2546,8 +2617,7 @@
       if (target.hasAttribute("data-build-undo")) { ui.buildUsed.pop(); ui.buildAnswer = ui.buildUsed.map(index => ui.buildTiles[index]).join(""); renderPhonics(); return; }
 
       if (target.dataset.talkTopic) {
-        ui.smallTalkTopic = target.dataset.talkTopic;
-        ui.selectedBlocks = {};
+        resetTalk(target.dataset.talkTopic);
         renderSmallTalk();
         return;
       }
@@ -2558,7 +2628,11 @@
       }
       if (target.dataset.blockGroup) {
         ui.selectedBlocks[target.dataset.blockGroup] = target.dataset.blockValue;
+        const topic = availableSmallTalk().find(item => item.id === ui.smallTalkTopic);
+        const round = talkRound(topic);
+        for (const group of Object.keys(round.blocks)) if (ui.selectedBlocks[group] && !blockOptions(round, group).includes(ui.selectedBlocks[group])) delete ui.selectedBlocks[group];
         renderSmallTalk();
+        speak(target.dataset.blockValue);
         return;
       }
       if (target.dataset.sendTalk) {
@@ -2571,6 +2645,8 @@
         renderSmallTalk();
         return;
       }
+      if (target.dataset.talkRole) { ui.talkRole = target.dataset.talkRole; resetTalk(); renderSmallTalk(); return; }
+      if (target.hasAttribute("data-restart-talk")) { resetTalk(); renderSmallTalk(); return; }
       if (target.dataset.reaction) {
         uniquePush(state.smalltalk.reactions, target.dataset.reaction);
         saveState();

@@ -86,9 +86,11 @@ test('phonics quizzes have unique labels and sounds and do not reveal their answ
 
 test('invalid replies are rejected and a valid reply stays visible', () => {
   const f = fixture();
-  f.run('ui.activeView="smalltalk";ui.selectedBlocks={answer:"No, I can\'t.",detail:"I can swim well."};sendTalk(smallTalkTopics.find(t=>t.id==="can_do"))');
+  f.run('ui.activeView="smalltalk";ui.smallTalkTopic="can_do";ui.selectedBlocks={answer:"No, I can\'t.",detail:"I can swim well."};sendTalk(smallTalkTopics.find(t=>t.id==="can_do"))');
   assert.equal(f.run('state.smalltalk.completedTopics.length'), 0);
   f.run('ui.selectedBlocks.detail="I can\'t swim yet.";sendTalk(smallTalkTopics.find(t=>t.id==="can_do"))');
+  assert.equal(f.run('state.smalltalk.completedTopics.includes("can_do")'), false);
+  f.run('ui.selectedBlocks={reaction:"Really?"};sendTalk(smallTalkTopics.find(t=>t.id==="can_do"));ui.selectedBlocks={followup:"Can you play soccer?"};sendTalk(smallTalkTopics.find(t=>t.id==="can_do"))');
   assert.equal(f.run('state.smalltalk.completedTopics.includes("can_do")'), true);
   assert.match(f.run('ui.feedback["smalltalk:main"].message'), /成功/);
   assert.equal(f.timers.size, 0);
@@ -173,4 +175,17 @@ test('earned rank never drops when the grade mode changes', () => {
   assert.equal(f.run('rankName(state.rankHighWater)'), '星間大使');
   f.click({ grade: '5-6' });
   assert.equal(f.run('rankName(state.rankHighWater)'), '星間大使');
+});
+
+test('every Small Talk topic completes a multi-turn exchange in both roles', () => {
+  const f = fixture();
+  const ids = f.run('smallTalkTopics.map(topic=>topic.id)');
+  for (const id of ids) for (const role of ['A', 'B']) {
+    f.run(`ui.activeView="smalltalk";ui.talkRole=${JSON.stringify(role)};resetTalk(${JSON.stringify(id)})`);
+    for (let turn = 0; turn < 3 && !f.run('ui.talkFinished'); turn++) {
+      f.run('(()=>{const topic=smallTalkTopics.find(t=>t.id===ui.smallTalkTopic);const round=talkRound(topic);for(const group of Object.keys(round.blocks))ui.selectedBlocks[group]=blockOptions(round,group)[0];sendTalk(topic)})()');
+    }
+    assert.equal(f.run('ui.talkFinished'), true, `${id}, ${role}`);
+    assert.ok(f.run('ui.talkLog.length') >= 4);
+  }
 });
