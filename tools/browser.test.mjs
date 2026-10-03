@@ -69,8 +69,48 @@ try {
   }
   assert.notEqual(colors[0], colors[1]);
   const audio = await evaluate('(async()=>{const context=new AudioContext();const results=[];for(const item of phonicsItems){const data=Uint8Array.from(atob(phonicsAudio[item.id]),char=>char.charCodeAt(0));const sample=await context.decodeAudioData(data.buffer);let peak=0;for(const point of sample.getChannelData(0))peak=Math.max(peak,Math.abs(point));if(peak<0.001||sample.duration<0.05)throw new Error("Empty sound "+item.id);results.push({id:item.id,duration:sample.duration})}await context.close();return results})()');
+  const until = async expression => { for (let index = 0; index < 30; index++) { if (await evaluate(expression)) return; await sleep(50); } throw new Error(`Did not complete: ${expression}`); };
+  await evaluate('window.SpeechSynthesisUtterance=class{constructor(text){this.text=text}};Object.defineProperty(window,"speechSynthesis",{configurable:true,value:{cancel(){},getVoices(){return [{name:"Test A",lang:"en-US"},{name:"Test B",lang:"en-US"}]},speak(utterance){setTimeout(()=>utterance.onend?.(),0)}}});true');
+  await evaluate('setView("smalltalk");resetTalk("can_do");renderSmallTalk();document.querySelector("[data-block-group=answer]").focus();document.querySelector("[data-block-group=answer]").click()');
+  assert.equal(await evaluate('document.activeElement.dataset.blockGroup'), 'answer', 'Focus was lost after selecting a block');
+  await evaluate('resetTalk("shopping");renderSmallTalk()');
+  for (let turn = 0; turn < 3; turn++) {
+    await evaluate('(()=>{const topic=smallTalkTopics.find(t=>t.id===ui.smallTalkTopic);const round=talkRound(topic);for(const group of Object.keys(round.blocks)){const option=blockOptions(round,group)[0];[...document.querySelectorAll(".view.active [data-block-group]")].find(b=>b.dataset.blockGroup===group&&b.dataset.blockValue===option).click()}document.querySelector(".view.active [data-send-talk]").click()})()');
+  }
+  assert.equal(await evaluate('ui.talkFinished && state.smalltalk.completedTopics.includes("shopping")'), true);
+  await evaluate('setView("home");document.querySelector("a[data-sky-word=animal_dog]").dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}))');
+  assert.equal(await evaluate('document.getElementById("word-dialog").open'), true);
+  await evaluate('document.querySelector("[data-close-dialog=word-dialog]").click();document.getElementById("teacher-button").click()');
+  assert.equal(await evaluate('document.getElementById("teacher-dialog").open'), true);
+  await evaluate('(()=>{const slider=document.getElementById("speech-speed");slider.value="0";slider.dispatchEvent(new Event("input",{bubbles:true}));const projection=document.querySelector("[data-setting=projection]");projection.checked=true;projection.dispatchEvent(new Event("change",{bubbles:true}))})()');
+  assert.equal(await evaluate('state.settings.rate===0.7 && document.body.classList.contains("projection")'), true);
+  await evaluate('(()=>{const projection=document.querySelector("[data-setting=projection]");projection.checked=false;projection.dispatchEvent(new Event("change",{bubbles:true}));const transfer=new DataTransfer();transfer.items.add(new File([exportProgress()],"progress.json",{type:"application/json"}));const input=document.getElementById("progress-file");input.files=transfer.files;input.dispatchEvent(new Event("change",{bubbles:true}))})()');
+  await until('document.getElementById("import-dialog").open');
+  assert.equal(await evaluate('ui.pendingImport.smalltalk.completedTopics.includes("shopping")'), true);
+  await evaluate('document.querySelector("[data-confirm-import]").click()');
+  assert.equal(await evaluate('state.smalltalk.completedTopics.includes("shopping") && document.getElementById("teacher-dialog").open'), true);
+  await evaluate('(()=>{const transfer=new DataTransfer();transfer.items.add(new File(["{}"],"wrong.json",{type:"application/json"}));const input=document.getElementById("progress-file");input.files=transfer.files;input.dispatchEvent(new Event("change",{bubbles:true}))})()');
+  await until('document.getElementById("teacher-status").textContent.includes("学年")');
+  assert.equal(await evaluate('state.smalltalk.completedTopics.includes("shopping")'), true);
+  const teacherCapture = await call('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
+  fs.writeFileSync(path.join(screenshots, 'teacher-mobile.png'), Buffer.from(teacherCapture.data, 'base64'));
+  await evaluate('document.querySelector("[data-close-dialog=teacher-dialog]").click();setView("gacha");document.querySelector("[data-gacha-draw]").click();document.querySelector("[data-gacha-draw]").click()');
+  assert.equal(await evaluate('ui.gachaSpinning && document.querySelector("[data-gacha-draw]").disabled'), true);
+  await until('!ui.gachaSpinning');
+  assert.equal(await evaluate('state.gacha.collected.length'), 1);
+  await evaluate('[...document.querySelectorAll(".view.active [data-scene-choice]")].find(button=>button.dataset.sceneChoice===ui.sceneQuiz.answer).click()');
+  assert.equal(await evaluate('state.gacha.practiced.length'), 1);
+  assert.notEqual(await evaluate('document.querySelector("[data-feedback=scene]").textContent'), '');
+  const persisted = await evaluate('JSON.stringify({talk:state.smalltalk.completedTopics,cards:state.gacha.practiced,rate:state.settings.rate})');
+  const previousNavigation = await evaluate('performance.timeOrigin');
+  await call('Page.reload');
+  await until(`performance.timeOrigin>${previousNavigation} && document.readyState==="complete" && typeof ui!=="undefined"`);
+  assert.equal(await evaluate('JSON.stringify({talk:state.smalltalk.completedTopics,cards:state.gacha.practiced,rate:state.settings.rate})'), persisted);
+  await evaluate('document.getElementById("grade-34").click();setView("vocab");ui.vocabMode="quiz";renderVocab()');
+  assert.equal(await evaluate('state.settings.subtitles'), false);
+  assert.equal(await evaluate('document.querySelector(".view.active [data-vocab-choice]").textContent.trim().length>0'), true);
   assert.equal(errors.length, 0, errors.join('\n'));
-  console.log(JSON.stringify({ passed: true, layouts, decodedAudio: audio.length, screenshots }, null, 2));
+  console.log(JSON.stringify({ passed: true, layouts, decodedAudio: audio.length, flows: ['keyboard focus', 'shopping conversation', 'star dialog', 'teacher settings', 'import preview and validation', 'single-flight gacha', 'scene mastery', 'reload persistence', 'younger grade'], screenshots }, null, 2));
   await call('Browser.close').catch(() => {});
 } finally {
   socket?.close();

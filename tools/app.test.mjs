@@ -207,6 +207,8 @@ test('drawing alone is not mastery and scene practice awards a badge', () => {
   f.click({ sceneChoice: 'expr_hello' });
   f.click({ sceneChoice: 'expr_hello' });
   assert.equal(f.run('state.gacha.practiced.length'), 1);
+  assert.equal(f.run('state.gacha.badges.includes("greeting")'), false);
+  f.run('for(const expr of expressions.filter(e=>e.scene==="greeting")){uniquePush(state.gacha.collected,expr.id);recordExpressionPractice(expr.id)}');
   assert.equal(f.run('state.gacha.badges.includes("greeting")'), true);
 });
 
@@ -218,7 +220,8 @@ test('export and import preserve learning records and reject unrelated files', (
   assert.equal(restored.vocab.records.num_one.correct, 1);
   assert.equal(restored.settings.rate, 0.7);
   assert.deepEqual(Array.from(restored.gacha.practiced), ['expr_hello']);
-  assert.throws(() => f.run('parseProgressImport("{\"app\":\"other\"}")'));
+  assert.throws(() => f.run(`parseProgressImport(${JSON.stringify(JSON.stringify({ app: 'other' }))})`), /別のアプリ/);
+  assert.throws(() => f.run(`parseProgressImport(${JSON.stringify(JSON.stringify({ app: 'interstellar-english', formatVersion: 3 }))})`), /形式には対応/);
   assert.throws(() => f.run('parseProgressImport("[]")'));
   assert.throws(() => f.run('parseProgressImport("{}")'));
   assert.throws(() => f.run('parseProgressImport("not json")'));
@@ -234,4 +237,38 @@ test('progress replacement clears in-flight exercises and pending awards', () =>
   assert.equal(f.run('state.gacha.collected.length'), 0);
   assert.equal(f.run('ui.talkTurn'), 0);
   assert.equal(f.run('ui.vocabQuiz'), null);
+});
+
+test('course content covers the promised scope and has stable unique identifiers', () => {
+  const f = fixture();
+  assert.equal(f.run('vocabCategories.length'), 10);
+  assert.equal(f.run('vocabCategories.flatMap(c=>c.words).length'), 100);
+  assert.equal(f.run('phonicsItems.filter(p=>p.level===1).length'), 26);
+  assert.equal(f.run('phonicsItems.length'), 44);
+  assert.equal(f.run('smallTalkTopics.length'), 9);
+  assert.equal(f.run('expressions.length'), 24);
+  assert.equal(f.run('smallTalkTopics.every(topic=>talkPractice[topic.id])'), true);
+  for (const data of ['vocabCategories.flatMap(c=>c.words)', 'phonicsItems', 'smallTalkTopics', 'expressions']) {
+    assert.equal(f.run(`new Set((${data}).map(item=>item.id)).size`), f.run(`(${data}).length`));
+  }
+  assert.equal(f.run('availableWords().every(word=>word.unit&&word.tags.length&&word.icon)'), true);
+});
+
+test('all phonics questions offer four distinguishable choices', () => {
+  const f = fixture();
+  f.run('ui.activeView="phonics"');
+  for (const id of f.run('phonicsItems.map(item=>item.id)')) {
+    f.run(`(()=>{const item=phonicsItems.find(p=>p.id===${JSON.stringify(id)});createPhonicsQuiz(item,phonicsItems.filter(p=>p.level===item.level))})()`);
+    assert.equal(f.run('ui.phonicsQuiz.choices.length'), 4, id);
+    assert.equal(f.run('new Set(ui.phonicsQuiz.choices.map(c=>c.pattern)).size'), 4, id);
+    assert.equal(f.run('new Set(ui.phonicsQuiz.choices.map(c=>c.ipa)).size'), 4, id);
+  }
+});
+
+test('legacy stars and earned badges survive course expansion', () => {
+  const f = fixture(JSON.stringify({ gradeMode: '3-4', rankHighWater: 100, vocab: { mastered: ['animal_dog', 'animal_cat'], categoriesComplete: ['animals'] }, gacha: { collected: ['expr_hello'], practiced: ['expr_hello'], badges: ['greeting'] } }));
+  assert.equal(f.run('state.vocab.mastered.includes("animal_dog")'), true);
+  assert.equal(f.run('state.vocab.badges.includes("animals")'), true);
+  assert.equal(f.run('state.gacha.badges.includes("greeting")'), true);
+  assert.equal(f.run('state.rankHighWater'), 100);
 });
