@@ -1119,7 +1119,7 @@
       .app-header { grid-template-columns: 1fr auto; }
       .status-strip { grid-column: 1 / -1; grid-row: 2; }
       .top-actions { grid-column: 2; grid-row: 1; }
-      .status-line { flex-wrap: nowrap; }
+      .status-line { flex-wrap: wrap; }
       .status-strip .chip { width: auto; min-height: 30px; font-size: 12px; padding: 3px 8px; }
       .nav-button { grid-template-columns: 1fr; justify-items: center; padding: 7px 3px; gap: 5px; min-height: 76px; text-align: center; }
       .nav-title { font-size: 12px; }
@@ -1163,7 +1163,7 @@
     .utility-row, .session-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 14px 0; }
     .session-bar { border-block: 1px solid var(--line); padding: 12px 0; }
     .session-bar[hidden] { display: none; }
-    .chip.profile-name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+    .chip.profile-name { max-width: min(160px, 100%); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
     .session-bar strong { flex: 1; min-width: 140px; }
     .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 20px 0; }
     .form-grid label, .field { display: grid; gap: 6px; min-width: 0; }

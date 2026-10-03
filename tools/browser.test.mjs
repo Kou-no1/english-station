@@ -58,7 +58,10 @@ try {
       await evaluate(`setView(${JSON.stringify(view)})`);
       await sleep(220);
       const layout = await evaluate('({view:ui.activeView,width:innerWidth,scrollWidth:document.documentElement.scrollWidth,contentY:document.querySelector(".view.active").getBoundingClientRect().top,overflowing:[...document.querySelectorAll(".view.active button")].filter(b=>b.getBoundingClientRect().right>innerWidth+1||b.getBoundingClientRect().left<0).map(b=>b.textContent.trim())})');
-      assert.ok(layout.scrollWidth <= width, `${view} overflows at ${width}px`);
+      if (layout.scrollWidth > width) {
+        const elements = await evaluate('[...document.querySelectorAll(".app-shell *")].filter(element=>element.getClientRects().length&&(element.getBoundingClientRect().right>innerWidth+1||element.getBoundingClientRect().left<0)).slice(0,20).map(element=>({tag:element.tagName,class:element.className.baseVal??element.className,text:element.textContent.trim().slice(0,100),right:element.getBoundingClientRect().right}))');
+        throw new Error(`${view} overflows at ${width}px: ${JSON.stringify({layout,elements})}`);
+      }
       assert.deepEqual(layout.overflowing, [], `${view} buttons overflow at ${width}px`);
       if (width === 390) assert.ok(layout.contentY < 370, `${view} content starts too far down: ${layout.contentY}`);
       layouts.push(layout);
