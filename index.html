@@ -1,0 +1,2322 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>星間通信局 | 英語学習ステーション</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #07111f;
+      --bg-2: #0d1d33;
+      --panel: rgba(15, 29, 49, 0.92);
+      --panel-2: rgba(22, 39, 64, 0.96);
+      --line: rgba(210, 226, 255, 0.2);
+      --line-strong: rgba(210, 226, 255, 0.36);
+      --text: #f4f7fb;
+      --muted: #aebbd0;
+      --cyan: #55d7ee;
+      --coral: #ff9278;
+      --gold: #f6c65b;
+      --violet: #bf9cff;
+      --green: #79dfa7;
+      --danger: #ff6f78;
+      --shadow: 0 18px 46px rgba(0, 0, 0, 0.28);
+      --radius: 8px;
+      --mono: ui-monospace, "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      --sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      min-height: 100%;
+      background: var(--bg);
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 16px;
+      line-height: 1.55;
+      background:
+        radial-gradient(circle at 12% 18%, rgba(85, 215, 238, 0.16) 0 1px, transparent 2px 100%),
+        radial-gradient(circle at 78% 22%, rgba(246, 198, 91, 0.18) 0 1px, transparent 2px 100%),
+        radial-gradient(circle at 30% 72%, rgba(191, 156, 255, 0.16) 0 1px, transparent 2px 100%),
+        radial-gradient(circle at 92% 84%, rgba(255, 146, 120, 0.16) 0 1px, transparent 2px 100%),
+        linear-gradient(180deg, #06101e 0%, #0a1728 48%, #06101d 100%);
+      background-size: auto, auto, auto, auto, auto;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      background-image:
+        radial-gradient(circle, rgba(255,255,255,0.68) 0 1px, transparent 1.6px),
+        radial-gradient(circle, rgba(85,215,238,0.42) 0 1px, transparent 1.8px);
+      background-position: 0 0, 32px 48px;
+      background-size: 88px 88px, 134px 134px;
+      opacity: 0.5;
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+    }
+
+    button {
+      min-height: 44px;
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius);
+      color: var(--text);
+      background: rgba(244, 247, 251, 0.08);
+      cursor: pointer;
+    }
+
+    button:hover:not(:disabled) {
+      border-color: rgba(244, 247, 251, 0.54);
+      background: rgba(244, 247, 251, 0.13);
+      transform: translateY(-1px);
+    }
+
+    button:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+
+    button:focus-visible,
+    [role="button"]:focus-visible,
+    select:focus-visible {
+      outline: 4px solid rgba(246, 198, 91, 0.92);
+      outline-offset: 2px;
+    }
+
+    .app-shell {
+      width: min(1240px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 18px 0 36px;
+    }
+
+    .app-header {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      display: grid;
+      grid-template-columns: minmax(240px, 1.2fr) minmax(300px, 1.5fr) auto;
+      gap: 14px;
+      align-items: center;
+      padding: 12px 0 16px;
+      background: linear-gradient(180deg, rgba(7, 17, 31, 0.98), rgba(7, 17, 31, 0.84));
+      backdrop-filter: blur(12px);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .brand-mark {
+      display: grid;
+      place-items: center;
+      width: 52px;
+      height: 52px;
+      border: 1px solid rgba(85, 215, 238, 0.5);
+      border-radius: var(--radius);
+      background:
+        linear-gradient(135deg, rgba(85, 215, 238, 0.18), rgba(191, 156, 255, 0.18)),
+        rgba(244, 247, 251, 0.08);
+      color: var(--gold);
+      font-family: var(--mono);
+      font-weight: 900;
+      letter-spacing: 0;
+      box-shadow: inset 0 0 18px rgba(85, 215, 238, 0.18);
+    }
+
+    .brand p,
+    .brand h1 {
+      margin: 0;
+    }
+
+    .brand p {
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 0.76rem;
+      letter-spacing: 0;
+    }
+
+    .brand h1 {
+      font-size: clamp(1.35rem, 2vw, 1.9rem);
+      line-height: 1.15;
+      letter-spacing: 0;
+    }
+
+    .status-strip {
+      display: grid;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .status-line {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      min-height: 34px;
+      padding: 5px 10px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--text);
+      background: rgba(244, 247, 251, 0.07);
+      font-size: 0.88rem;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .chip strong {
+      color: var(--gold);
+    }
+
+    .meter {
+      display: grid;
+      grid-template-columns: 70px minmax(120px, 1fr) 52px;
+      gap: 8px;
+      align-items: center;
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 0.78rem;
+    }
+
+    .meter-track {
+      overflow: hidden;
+      height: 12px;
+      border: 1px solid rgba(85, 215, 238, 0.42);
+      border-radius: 999px;
+      background: rgba(244, 247, 251, 0.08);
+    }
+
+    .meter-fill {
+      display: block;
+      width: var(--value, 0%);
+      height: 100%;
+      background: linear-gradient(90deg, var(--cyan), var(--gold), var(--violet));
+    }
+
+    .top-actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .segmented {
+      display: inline-grid;
+      grid-template-columns: 1fr 1fr;
+      min-width: 212px;
+      padding: 4px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(244, 247, 251, 0.06);
+    }
+
+    .segmented button {
+      min-height: 38px;
+      border: 0;
+      background: transparent;
+      font-weight: 900;
+    }
+
+    .segmented button.active {
+      color: #07111f;
+      background: var(--gold);
+      box-shadow: 0 0 0 1px rgba(246, 198, 91, 0.5);
+    }
+
+    .icon-button {
+      display: inline-grid;
+      place-items: center;
+      width: 44px;
+      min-width: 44px;
+      padding: 0;
+      font-family: var(--mono);
+      font-weight: 900;
+    }
+
+    .primary-button,
+    .secondary-button,
+    .signal-button,
+    .warm-button,
+    .gold-button,
+    .violet-button,
+    .danger-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 46px;
+      padding: 9px 15px;
+      font-weight: 900;
+    }
+
+    .primary-button {
+      color: #05111e;
+      background: var(--cyan);
+      border-color: rgba(85, 215, 238, 0.8);
+    }
+
+    .secondary-button {
+      background: rgba(244, 247, 251, 0.1);
+    }
+
+    .signal-button {
+      color: #04111d;
+      background: var(--cyan);
+      border-color: rgba(85, 215, 238, 0.8);
+    }
+
+    .warm-button {
+      color: #1b0b06;
+      background: var(--coral);
+      border-color: rgba(255, 146, 120, 0.78);
+    }
+
+    .gold-button {
+      color: #1c1300;
+      background: var(--gold);
+      border-color: rgba(246, 198, 91, 0.84);
+    }
+
+    .violet-button {
+      color: #120a20;
+      background: var(--violet);
+      border-color: rgba(191, 156, 255, 0.8);
+    }
+
+    .danger-button {
+      color: #2a0508;
+      background: var(--danger);
+      border-color: rgba(255, 111, 120, 0.84);
+    }
+
+    .main-nav {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin: 6px 0 18px;
+    }
+
+    .nav-button {
+      display: grid;
+      grid-template-columns: 38px 1fr;
+      gap: 10px;
+      align-items: center;
+      min-height: 64px;
+      padding: 10px;
+      text-align: left;
+    }
+
+    .nav-button.active {
+      border-color: var(--accent, var(--cyan));
+      box-shadow: inset 0 0 0 1px var(--accent, var(--cyan)), 0 0 22px rgba(85, 215, 238, 0.08);
+    }
+
+    .nav-mark {
+      display: grid;
+      place-items: center;
+      width: 38px;
+      height: 38px;
+      border-radius: var(--radius);
+      color: #06101e;
+      background: var(--accent, var(--cyan));
+      font-family: var(--mono);
+      font-weight: 900;
+    }
+
+    .nav-title {
+      display: block;
+      font-weight: 900;
+      line-height: 1.1;
+    }
+
+    .nav-sub {
+      display: block;
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    main {
+      min-height: 620px;
+    }
+
+    .view {
+      display: none;
+      animation: fade-in 180ms ease-out;
+    }
+
+    .view.active {
+      display: block;
+    }
+
+    @keyframes fade-in {
+      from {
+        opacity: 0;
+        transform: translateY(5px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      align-items: end;
+      margin: 0 0 14px;
+    }
+
+    .section-head h2,
+    .panel h2,
+    .panel h3 {
+      margin: 0;
+      line-height: 1.18;
+      letter-spacing: 0;
+    }
+
+    .section-head h2 {
+      font-size: clamp(1.45rem, 2.2vw, 2.25rem);
+    }
+
+    .section-head p,
+    .panel p {
+      margin: 6px 0 0;
+      color: var(--muted);
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.18fr) minmax(300px, 0.82fr);
+      gap: 16px;
+      align-items: start;
+    }
+
+    .layout.equal {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .panel-pad {
+      padding: 16px;
+    }
+
+    .panel + .panel {
+      margin-top: 14px;
+    }
+
+    .home-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
+      gap: 16px;
+      align-items: stretch;
+    }
+
+    .command-panel {
+      min-height: 520px;
+      padding: 18px;
+      background:
+        linear-gradient(135deg, rgba(85, 215, 238, 0.12), rgba(191, 156, 255, 0.06)),
+        var(--panel);
+    }
+
+    .command-title {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: start;
+      margin-bottom: 16px;
+    }
+
+    .command-title h2 {
+      margin: 0;
+      font-size: clamp(1.6rem, 2.8vw, 2.55rem);
+      line-height: 1.08;
+    }
+
+    .mission-board {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .dept-card {
+      min-height: 188px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(244, 247, 251, 0.07);
+      text-align: left;
+    }
+
+    .dept-card:hover {
+      border-color: var(--accent, var(--cyan));
+    }
+
+    .dept-card h3 {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin: 0;
+      font-size: 1.05rem;
+    }
+
+    .dept-card p {
+      min-height: 46px;
+      margin: 8px 0 12px;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .progress-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      align-items: center;
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 0.78rem;
+    }
+
+    .mini-track {
+      overflow: hidden;
+      height: 8px;
+      border-radius: 999px;
+      background: rgba(244, 247, 251, 0.12);
+    }
+
+    .mini-track span {
+      display: block;
+      width: var(--value, 0%);
+      height: 100%;
+      background: var(--accent, var(--cyan));
+    }
+
+    .star-map {
+      min-height: 520px;
+      padding: 16px;
+      overflow: hidden;
+      background:
+        linear-gradient(180deg, rgba(246, 198, 91, 0.08), transparent 34%),
+        rgba(10, 21, 36, 0.96);
+    }
+
+    .star-map svg {
+      display: block;
+      width: 100%;
+      height: auto;
+      min-height: 310px;
+    }
+
+    .map-note {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .stat-box {
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(244, 247, 251, 0.06);
+    }
+
+    .stat-box b {
+      display: block;
+      color: var(--gold);
+      font-size: 1.2rem;
+      line-height: 1.1;
+    }
+
+    .stat-box span {
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .pill-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .pill-tabs button {
+      min-height: 38px;
+      padding: 6px 11px;
+      font-size: 0.9rem;
+      font-weight: 900;
+    }
+
+    .pill-tabs button.active {
+      color: #06101e;
+      background: var(--accent, var(--cyan));
+      border-color: transparent;
+    }
+
+    .flash-card {
+      display: grid;
+      gap: 12px;
+      min-height: 360px;
+      place-items: center;
+      padding: 18px;
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius);
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03)),
+        var(--panel-2);
+      text-align: center;
+    }
+
+    .big-icon {
+      display: grid;
+      place-items: center;
+      width: min(190px, 52vw);
+      height: min(190px, 52vw);
+      border: 1px solid rgba(246, 198, 91, 0.44);
+      border-radius: var(--radius);
+      background: rgba(246, 198, 91, 0.08);
+      font-size: clamp(4.5rem, 12vw, 7.5rem);
+      line-height: 1;
+    }
+
+    .word-en {
+      margin: 0;
+      font-size: clamp(2.1rem, 5vw, 4.4rem);
+      font-weight: 900;
+      line-height: 1;
+      letter-spacing: 0;
+    }
+
+    .word-ja {
+      margin: 0;
+      color: var(--muted);
+      font-size: 1.18rem;
+      font-weight: 800;
+    }
+
+    .button-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .quiz-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      width: 100%;
+    }
+
+    .choice-button {
+      display: grid;
+      gap: 5px;
+      place-items: center;
+      min-height: 96px;
+      padding: 10px;
+      font-weight: 900;
+    }
+
+    .choice-icon {
+      font-size: 2.2rem;
+      line-height: 1;
+    }
+
+    .choice-button.correct {
+      color: #06101e;
+      background: var(--green);
+      border-color: var(--green);
+    }
+
+    .choice-button.wrong {
+      color: #260608;
+      background: var(--danger);
+      border-color: var(--danger);
+    }
+
+    .constellation-list,
+    .collection-grid,
+    .topic-grid,
+    .phonics-grid {
+      display: grid;
+      gap: 10px;
+    }
+
+    .constellation-item,
+    .collection-item,
+    .topic-item,
+    .phonics-item {
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(244, 247, 251, 0.06);
+    }
+
+    .constellation-item.complete {
+      border-color: rgba(246, 198, 91, 0.8);
+      background: rgba(246, 198, 91, 0.1);
+    }
+
+    .constellation-item h4,
+    .collection-item h4,
+    .topic-item h4,
+    .phonics-item h4 {
+      margin: 0 0 6px;
+      font-size: 1rem;
+    }
+
+    .stars-inline {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-top: 8px;
+    }
+
+    .star-dot {
+      width: 13px;
+      height: 13px;
+      border-radius: 50%;
+      background: rgba(244, 247, 251, 0.2);
+      box-shadow: inset 0 0 0 1px rgba(244, 247, 251, 0.1);
+    }
+
+    .star-dot.on {
+      background: var(--gold);
+      box-shadow: 0 0 12px rgba(246, 198, 91, 0.8);
+    }
+
+    .gacha-stage {
+      display: grid;
+      place-items: center;
+      gap: 14px;
+      min-height: 390px;
+      padding: 18px;
+      text-align: center;
+    }
+
+    .warp-dial {
+      display: grid;
+      place-items: center;
+      width: min(280px, 70vw);
+      aspect-ratio: 1;
+      border: 2px solid rgba(191, 156, 255, 0.76);
+      border-radius: 50%;
+      background:
+        conic-gradient(from 0deg, rgba(191,156,255,0.28), rgba(85,215,238,0.18), rgba(246,198,91,0.24), rgba(255,146,120,0.18), rgba(191,156,255,0.28)),
+        rgba(244, 247, 251, 0.06);
+      box-shadow: inset 0 0 36px rgba(191, 156, 255, 0.2), 0 0 28px rgba(191, 156, 255, 0.14);
+    }
+
+    .warp-dial.spin {
+      animation: spin 820ms cubic-bezier(.18,.74,.26,1);
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(720deg);
+      }
+    }
+
+    .warp-core {
+      display: grid;
+      place-items: center;
+      width: 46%;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      color: #120a20;
+      background: var(--violet);
+      font-family: var(--mono);
+      font-size: 2.4rem;
+      font-weight: 900;
+    }
+
+    .expression-card {
+      width: min(360px, 100%);
+      min-height: 210px;
+      padding: 16px;
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius);
+      background: rgba(244, 247, 251, 0.08);
+      text-align: left;
+    }
+
+    .rarity {
+      display: inline-flex;
+      min-height: 28px;
+      padding: 3px 9px;
+      border-radius: 999px;
+      color: #07111f;
+      background: var(--gold);
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      font-weight: 900;
+    }
+
+    .rarity.common {
+      background: #9fd7ff;
+    }
+
+    .rarity.rare {
+      background: var(--violet);
+    }
+
+    .rarity.super {
+      background: var(--gold);
+    }
+
+    .expression-card h3 {
+      margin: 12px 0 4px;
+      font-size: clamp(1.55rem, 4vw, 2.35rem);
+      letter-spacing: 0;
+    }
+
+    .line-stack {
+      display: grid;
+      gap: 8px;
+    }
+
+    .dialogue-line {
+      display: grid;
+      grid-template-columns: 42px 1fr auto;
+      gap: 10px;
+      align-items: center;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(244, 247, 251, 0.06);
+    }
+
+    .speaker-badge {
+      display: grid;
+      place-items: center;
+      width: 42px;
+      height: 42px;
+      border-radius: var(--radius);
+      color: #06101e;
+      background: var(--coral);
+      font-family: var(--mono);
+      font-weight: 900;
+    }
+
+    .block-builder {
+      display: grid;
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .block-group {
+      display: grid;
+      gap: 6px;
+    }
+
+    .block-group strong {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .block-options {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .word-block {
+      min-height: 38px;
+      padding: 6px 10px;
+      font-weight: 900;
+      background: rgba(255, 146, 120, 0.1);
+      border-color: rgba(255, 146, 120, 0.35);
+    }
+
+    .word-block.active {
+      color: #1b0b06;
+      background: var(--coral);
+      border-color: var(--coral);
+    }
+
+    .answer-line {
+      min-height: 64px;
+      padding: 12px;
+      border: 1px dashed rgba(255, 146, 120, 0.55);
+      border-radius: var(--radius);
+      background: rgba(255, 146, 120, 0.08);
+      font-size: 1.25rem;
+      font-weight: 900;
+    }
+
+    .reaction-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .reaction-card {
+      min-height: 42px;
+      padding: 7px 10px;
+      border-color: rgba(255, 146, 120, 0.35);
+      background: rgba(255, 146, 120, 0.1);
+      font-weight: 900;
+    }
+
+    .signal-console {
+      display: grid;
+      gap: 14px;
+      min-height: 390px;
+      padding: 16px;
+      border: 1px solid rgba(85, 215, 238, 0.34);
+      border-radius: var(--radius);
+      background:
+        linear-gradient(180deg, rgba(85, 215, 238, 0.1), rgba(85, 215, 238, 0.03)),
+        var(--panel-2);
+    }
+
+    .signal-card {
+      display: grid;
+      gap: 8px;
+      place-items: center;
+      min-height: 170px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(244, 247, 251, 0.06);
+      text-align: center;
+    }
+
+    .signal-pattern {
+      font-size: clamp(3.6rem, 11vw, 7rem);
+      font-weight: 900;
+      line-height: 1;
+      letter-spacing: 0;
+    }
+
+    .ipa {
+      color: var(--cyan);
+      font-family: var(--mono);
+      font-size: 1.1rem;
+      font-weight: 900;
+    }
+
+    .letter-builder {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+    }
+
+    .letter-tile {
+      display: grid;
+      place-items: center;
+      width: 52px;
+      min-height: 52px;
+      padding: 0;
+      color: #06101e;
+      background: var(--cyan);
+      border-color: var(--cyan);
+      font-size: 1.45rem;
+      font-weight: 900;
+    }
+
+    .build-target {
+      min-height: 58px;
+      padding: 10px;
+      border: 1px dashed rgba(85, 215, 238, 0.55);
+      border-radius: var(--radius);
+      text-align: center;
+      font-size: 1.7rem;
+      font-weight: 900;
+    }
+
+    .feedback {
+      min-height: 34px;
+      color: var(--muted);
+      font-weight: 800;
+    }
+
+    .feedback.good {
+      color: var(--green);
+    }
+
+    .feedback.bad {
+      color: var(--danger);
+    }
+
+    .locked-note {
+      padding: 12px;
+      border: 1px solid rgba(246, 198, 91, 0.44);
+      border-radius: var(--radius);
+      background: rgba(246, 198, 91, 0.08);
+      color: var(--gold);
+      font-weight: 800;
+    }
+
+    .footer-note {
+      margin: 22px 0 0;
+      color: var(--muted);
+      font-size: 0.88rem;
+      text-align: center;
+    }
+
+    @media (max-width: 980px) {
+      .app-header,
+      .home-grid,
+      .layout,
+      .layout.equal {
+        grid-template-columns: 1fr;
+      }
+
+      .app-header {
+        position: static;
+      }
+
+      .top-actions {
+        justify-content: flex-start;
+      }
+
+      .main-nav {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 620px) {
+      .app-shell {
+        width: min(100% - 20px, 1240px);
+        padding-top: 10px;
+      }
+
+      .brand-mark {
+        width: 46px;
+        height: 46px;
+      }
+
+      .status-line,
+      .button-row,
+      .toolbar {
+        align-items: stretch;
+      }
+
+      .chip,
+      .primary-button,
+      .secondary-button,
+      .signal-button,
+      .warm-button,
+      .gold-button,
+      .violet-button,
+      .danger-button {
+        width: 100%;
+      }
+
+      .segmented {
+        width: 100%;
+      }
+
+      .main-nav,
+      .mission-board,
+      .quiz-grid,
+      .map-note {
+        grid-template-columns: 1fr;
+      }
+
+      .section-head {
+        display: grid;
+      }
+
+      .dialogue-line {
+        grid-template-columns: 42px 1fr;
+      }
+
+      .dialogue-line .icon-button {
+        grid-column: 1 / -1;
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">ISC</span>
+        <div>
+          <p>MANABI GATE / ENGLISH</p>
+          <h1>星間通信局</h1>
+        </div>
+      </div>
+
+      <section class="status-strip" aria-live="polite">
+        <div class="status-line" id="status-line"></div>
+        <div class="meter" aria-label="全体の通信ランク進捗">
+          <span>RANK</span>
+          <span class="meter-track"><span class="meter-fill" id="rank-meter"></span></span>
+          <span id="rank-percent">0%</span>
+        </div>
+      </section>
+
+      <div class="top-actions">
+        <div class="segmented" aria-label="学年モード">
+          <button type="button" id="grade-34" data-grade="3-4">3・4年</button>
+          <button type="button" id="grade-56" data-grade="5-6">5・6年</button>
+        </div>
+        <button type="button" class="icon-button" id="reset-button" title="進捗をリセット" aria-label="進捗をリセット">↻</button>
+      </div>
+    </header>
+
+    <nav class="main-nav" aria-label="通信局メニュー">
+      <button type="button" class="nav-button active" data-view="home" style="--accent: var(--gold)">
+        <span class="nav-mark">HQ</span>
+        <span><span class="nav-title">本部</span><span class="nav-sub">管制室</span></span>
+      </button>
+      <button type="button" class="nav-button" data-view="phonics" style="--accent: var(--cyan)">
+        <span class="nav-mark">PH</span>
+        <span><span class="nav-title">電波解読課</span><span class="nav-sub">フォニックス</span></span>
+      </button>
+      <button type="button" class="nav-button" data-view="smalltalk" style="--accent: var(--coral)">
+        <span class="nav-mark">ST</span>
+        <span><span class="nav-title">交信実践課</span><span class="nav-sub">Small Talk</span></span>
+      </button>
+      <button type="button" class="nav-button" data-view="vocab" style="--accent: var(--gold)">
+        <span class="nav-mark">VC</span>
+        <span><span class="nav-title">星図課</span><span class="nav-sub">語彙フラッシュ</span></span>
+      </button>
+      <button type="button" class="nav-button" data-view="gacha" style="--accent: var(--violet)">
+        <span class="nav-mark">EX</span>
+        <span><span class="nav-title">表現探査課</span><span class="nav-sub">表現ガチャ</span></span>
+      </button>
+    </nav>
+
+    <main id="app">
+      <section class="view active" id="view-home"></section>
+      <section class="view" id="view-phonics"></section>
+      <section class="view" id="view-smalltalk"></section>
+      <section class="view" id="view-vocab"></section>
+      <section class="view" id="view-gacha"></section>
+    </main>
+
+    <p class="footer-note">音声はブラウザの Web Speech API を使います。進捗はこの端末の localStorage に保存されます。</p>
+  </div>
+
+  <script>
+    const STORAGE_KEY = "interstellar_english_progress_v1";
+
+    const departments = [
+      {
+        id: "phonics",
+        mark: "PH",
+        name: "電波解読課",
+        subtitle: "音と文字を受信して、英語の信号を読めるようにする。",
+        accent: "var(--cyan)"
+      },
+      {
+        id: "smalltalk",
+        mark: "ST",
+        name: "交信実践課",
+        subtitle: "聞いて、選んで、つなぎ言葉で会話を続ける。",
+        accent: "var(--coral)"
+      },
+      {
+        id: "vocab",
+        mark: "VC",
+        name: "星図課",
+        subtitle: "テーマ別の単語を集め、自分だけの星座を育てる。",
+        accent: "var(--gold)"
+      },
+      {
+        id: "gacha",
+        mark: "EX",
+        name: "表現探査課",
+        subtitle: "使える定型表現をワープ通信で集める。",
+        accent: "var(--violet)"
+      }
+    ];
+
+    const vocabCategories = [
+      {
+        id: "numbers_colors",
+        label: "数・色・形",
+        grade: ["3-4", "5-6"],
+        color: "#55d7ee",
+        words: [
+          { id: "num_one", en: "one", ja: "1", icon: "1" },
+          { id: "num_two", en: "two", ja: "2", icon: "2" },
+          { id: "color_red", en: "red", ja: "赤", icon: "■" },
+          { id: "color_blue", en: "blue", ja: "青", icon: "■" },
+          { id: "shape_circle", en: "circle", ja: "円", icon: "○" },
+          { id: "shape_star", en: "star", ja: "星", icon: "☆" }
+        ]
+      },
+      {
+        id: "animals",
+        label: "動物",
+        grade: ["3-4", "5-6"],
+        color: "#f6c65b",
+        words: [
+          { id: "animal_dog", en: "dog", ja: "犬", icon: "犬" },
+          { id: "animal_cat", en: "cat", ja: "猫", icon: "猫" },
+          { id: "animal_panda", en: "panda", ja: "パンダ", icon: "熊" },
+          { id: "animal_bird", en: "bird", ja: "鳥", icon: "鳥" },
+          { id: "animal_elephant", en: "elephant", ja: "ぞう", icon: "象" },
+          { id: "animal_rabbit", en: "rabbit", ja: "うさぎ", icon: "兎" }
+        ]
+      },
+      {
+        id: "foods",
+        label: "食べ物",
+        grade: ["3-4", "5-6"],
+        color: "#ff9278",
+        words: [
+          { id: "food_apple", en: "apple", ja: "りんご", icon: "林" },
+          { id: "food_rice", en: "rice", ja: "ごはん", icon: "米" },
+          { id: "food_pizza", en: "pizza", ja: "ピザ", icon: "PZ" },
+          { id: "food_milk", en: "milk", ja: "牛乳", icon: "乳" },
+          { id: "food_bread", en: "bread", ja: "パン", icon: "B" },
+          { id: "food_curry", en: "curry", ja: "カレー", icon: "C" }
+        ]
+      },
+      {
+        id: "school",
+        label: "学校・教科",
+        grade: ["5-6"],
+        color: "#79dfa7",
+        words: [
+          { id: "school_math", en: "math", ja: "算数", icon: "数" },
+          { id: "school_music", en: "music", ja: "音楽", icon: "♪" },
+          { id: "school_pe", en: "P.E.", ja: "体育", icon: "PE" },
+          { id: "school_library", en: "library", ja: "図書室", icon: "本" },
+          { id: "school_science", en: "science", ja: "理科", icon: "理" },
+          { id: "school_english", en: "English", ja: "英語", icon: "英" }
+        ]
+      },
+      {
+        id: "town_world",
+        label: "町・世界",
+        grade: ["5-6"],
+        color: "#bf9cff",
+        words: [
+          { id: "town_station", en: "station", ja: "駅", icon: "駅" },
+          { id: "town_park", en: "park", ja: "公園", icon: "公" },
+          { id: "town_hospital", en: "hospital", ja: "病院", icon: "病" },
+          { id: "world_japan", en: "Japan", ja: "日本", icon: "日" },
+          { id: "world_brazil", en: "Brazil", ja: "ブラジル", icon: "BR" },
+          { id: "world_australia", en: "Australia", ja: "オーストラリア", icon: "AU" }
+        ]
+      },
+      {
+        id: "actions_feelings",
+        label: "動作・気持ち",
+        grade: ["3-4", "5-6"],
+        color: "#9fd7ff",
+        words: [
+          { id: "act_run", en: "run", ja: "走る", icon: "走" },
+          { id: "act_read", en: "read", ja: "読む", icon: "読" },
+          { id: "act_sleep", en: "sleep", ja: "寝る", icon: "眠" },
+          { id: "feel_happy", en: "happy", ja: "うれしい", icon: "笑" },
+          { id: "feel_sad", en: "sad", ja: "悲しい", icon: "涙" },
+          { id: "feel_hungry", en: "hungry", ja: "お腹がすいた", icon: "腹" }
+        ]
+      }
+    ];
+
+    const phonicsItems = [
+      { id: "ph_a", level: 1, pattern: "Aa", sound: "a", ipa: "/a/", example: "apple", grade: ["3-4", "5-6"] },
+      { id: "ph_b", level: 1, pattern: "Bb", sound: "b", ipa: "/b/", example: "book", grade: ["3-4", "5-6"] },
+      { id: "ph_c", level: 1, pattern: "Cc", sound: "c", ipa: "/k/", example: "cat", grade: ["3-4", "5-6"] },
+      { id: "ph_d", level: 1, pattern: "Dd", sound: "d", ipa: "/d/", example: "dog", grade: ["3-4", "5-6"] },
+      { id: "ph_e", level: 1, pattern: "Ee", sound: "e", ipa: "/e/", example: "egg", grade: ["3-4", "5-6"] },
+      { id: "ph_f", level: 1, pattern: "Ff", sound: "f", ipa: "/f/", example: "fish", grade: ["3-4", "5-6"] },
+      { id: "ph_m", level: 1, pattern: "Mm", sound: "m", ipa: "/m/", example: "moon", grade: ["3-4", "5-6"] },
+      { id: "ph_s", level: 1, pattern: "Ss", sound: "s", ipa: "/s/", example: "sun", grade: ["3-4", "5-6"] },
+      { id: "ph_sh", level: 2, pattern: "sh", sound: "sh", ipa: "/sh/", example: "ship", grade: ["5-6"] },
+      { id: "ph_ch", level: 2, pattern: "ch", sound: "ch", ipa: "/ch/", example: "chair", grade: ["5-6"] },
+      { id: "ph_th", level: 2, pattern: "th", sound: "th", ipa: "/th/", example: "three", grade: ["5-6"] },
+      { id: "ph_bl", level: 2, pattern: "bl", sound: "bl", ipa: "/bl/", example: "blue", grade: ["5-6"] },
+      { id: "ph_ck", level: 2, pattern: "ck", sound: "ck", ipa: "/k/", example: "clock", grade: ["5-6"] },
+      { id: "ph_ai", level: 3, pattern: "ai", sound: "ai", ipa: "/ei/", example: "rain", grade: ["5-6"], build: "rain" },
+      { id: "ph_oa", level: 3, pattern: "oa", sound: "oa", ipa: "/ou/", example: "boat", grade: ["5-6"], build: "boat" },
+      { id: "ph_cat", level: 3, pattern: "CVC", sound: "cat", ipa: "c-a-t", example: "cat", grade: ["5-6"], build: "cat" },
+      { id: "ph_sun", level: 3, pattern: "CVC", sound: "sun", ipa: "s-u-n", example: "sun", grade: ["5-6"], build: "sun" }
+    ];
+
+    const smallTalkTopics = [
+      {
+        id: "greeting",
+        label: "あいさつ・自己紹介",
+        grade: ["3-4", "5-6"],
+        planet: "ミート星",
+        exchange: [
+          { speaker: "A", en: "Hello. I'm Sora." },
+          { speaker: "B", en: "Hello. I'm Mina. Nice to meet you." }
+        ],
+        blocks: {
+          greeting: ["Hello.", "Hi.", "Good morning."],
+          name: ["I'm Sora.", "I'm Mina.", "I'm Ren."],
+          closing: ["Nice to meet you.", "Thank you.", "See you."]
+        }
+      },
+      {
+        id: "likes",
+        label: "好きなもの",
+        grade: ["3-4", "5-6"],
+        planet: "ライク星",
+        exchange: [
+          { speaker: "A", en: "What color do you like?" },
+          { speaker: "B", en: "I like blue. How about you?" }
+        ],
+        blocks: {
+          subject: ["I"],
+          verb: ["like"],
+          topic: ["blue.", "soccer.", "apples.", "music."],
+          bridge: ["How about you?", "Me too!", "That's nice."]
+        }
+      },
+      {
+        id: "daily_routine",
+        label: "1日の生活",
+        grade: ["5-6"],
+        planet: "デイリー星",
+        exchange: [
+          { speaker: "A", en: "What time do you get up?" },
+          { speaker: "B", en: "I get up at 6:30. How about you?" }
+        ],
+        blocks: {
+          subject: ["I"],
+          verb: ["get up", "eat breakfast", "go to bed"],
+          time: ["at 6:30.", "at 7:00.", "at 9:00."],
+          bridge: ["How about you?", "Really?", "That's nice."]
+        }
+      },
+      {
+        id: "can_do",
+        label: "できること",
+        grade: ["5-6"],
+        planet: "スキル星",
+        exchange: [
+          { speaker: "A", en: "Can you swim?" },
+          { speaker: "B", en: "Yes, I can. I can swim well." }
+        ],
+        blocks: {
+          answer: ["Yes, I can.", "No, I can't."],
+          subject: ["I"],
+          verb: ["can play", "can swim", "can cook"],
+          object: ["soccer.", "fast.", "curry."]
+        }
+      },
+      {
+        id: "future_dream",
+        label: "将来の夢",
+        grade: ["5-6"],
+        planet: "ドリーム星",
+        exchange: [
+          { speaker: "A", en: "What do you want to be?" },
+          { speaker: "B", en: "I want to be a teacher." }
+        ],
+        blocks: {
+          subject: ["I"],
+          phrase: ["want to be"],
+          job: ["a teacher.", "a doctor.", "a soccer player.", "a designer."],
+          bridge: ["How about you?", "Good idea.", "That's nice."]
+        }
+      }
+    ];
+
+    const reactions = ["Really?", "Me too!", "That's nice.", "How about you?", "Good idea.", "I see."];
+
+    const expressions = [
+      { id: "expr_hello", rarity: "common", grade: ["3-4", "5-6"], en: "Hello!", ja: "こんにちは", scene: "greeting", prompt: "友だちに会ったとき" },
+      { id: "expr_thanks", rarity: "common", grade: ["3-4", "5-6"], en: "Thank you.", ja: "ありがとう", scene: "thanks", prompt: "何かをしてもらったとき" },
+      { id: "expr_excuse", rarity: "common", grade: ["3-4", "5-6"], en: "Excuse me.", ja: "すみません", scene: "attention", prompt: "声をかけたいとき" },
+      { id: "expr_see_you", rarity: "common", grade: ["3-4", "5-6"], en: "See you!", ja: "またね", scene: "farewell", prompt: "別れるとき" },
+      { id: "expr_have", rarity: "rare", grade: ["5-6"], en: "Can I have this?", ja: "これをください", scene: "shopping", prompt: "買い物で品物をほしいとき" },
+      { id: "expr_price", rarity: "rare", grade: ["5-6"], en: "How much is it?", ja: "いくらですか", scene: "shopping", prompt: "値段を聞きたいとき" },
+      { id: "expr_what_this", rarity: "rare", grade: ["5-6"], en: "What's this?", ja: "これは何ですか", scene: "question", prompt: "知らないものを見つけたとき" },
+      { id: "expr_lets", rarity: "rare", grade: ["5-6"], en: "Let's play together.", ja: "いっしょに遊ぼう", scene: "invite", prompt: "友だちを誘うとき" },
+      { id: "expr_look_forward", rarity: "super", grade: ["5-6"], en: "I'm looking forward to it.", ja: "楽しみにしています", scene: "future", prompt: "行事や予定が楽しみなとき" },
+      { id: "expr_would_like", rarity: "super", grade: ["5-6"], en: "Would you like some tea?", ja: "お茶はいかがですか", scene: "offer", prompt: "相手にすすめるとき" },
+      { id: "expr_opinion", rarity: "super", grade: ["5-6"], en: "What do you think about it?", ja: "それについてどう思いますか", scene: "opinion", prompt: "考えを聞きたいとき" }
+    ];
+
+    const state = loadState();
+    const ui = {
+      activeView: "home",
+      vocabCategory: "numbers_colors",
+      vocabIndex: 0,
+      vocabMode: "flash",
+      vocabRevealed: false,
+      vocabQuiz: null,
+      phonicsLevel: 1,
+      phonicsIndex: 0,
+      phonicsQuiz: null,
+      buildAnswer: "",
+      smallTalkTopic: "greeting",
+      selectedBlocks: {},
+      gachaLast: null,
+      gachaSpinning: false,
+      sceneQuiz: null
+    };
+
+    function loadState() {
+      const fallback = {
+        gradeMode: "5-6",
+        phonics: { mastered: [] },
+        vocab: { mastered: [], streaks: {}, misses: {}, categoriesComplete: [] },
+        smalltalk: { completedTopics: [], reactions: [] },
+        gacha: { collected: [] }
+      };
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return fallback;
+        const parsed = JSON.parse(raw);
+        return {
+          ...fallback,
+          ...parsed,
+          phonics: { ...fallback.phonics, ...(parsed.phonics || {}) },
+          vocab: { ...fallback.vocab, ...(parsed.vocab || {}) },
+          smalltalk: { ...fallback.smalltalk, ...(parsed.smalltalk || {}) },
+          gacha: { ...fallback.gacha, ...(parsed.gacha || {}) }
+        };
+      } catch (error) {
+        return fallback;
+      }
+    }
+
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+
+    function availableByGrade(item) {
+      return !item.grade || item.grade.includes(state.gradeMode);
+    }
+
+    function availableCategories() {
+      return vocabCategories.filter(availableByGrade);
+    }
+
+    function availableWords() {
+      return availableCategories().flatMap(category => category.words.map(word => ({ ...word, categoryId: category.id })));
+    }
+
+    function availablePhonics() {
+      return phonicsItems.filter(availableByGrade);
+    }
+
+    function availableExpressions() {
+      return expressions.filter(availableByGrade);
+    }
+
+    function availableSmallTalk() {
+      return smallTalkTopics.filter(availableByGrade);
+    }
+
+    function percent(part, total) {
+      if (!total) return 0;
+      return Math.round((part / total) * 100);
+    }
+
+    function uniquePush(list, id) {
+      if (!list.includes(id)) list.push(id);
+    }
+
+    function getProgress() {
+      const phTotal = availablePhonics().length;
+      const phDone = availablePhonics().filter(item => state.phonics.mastered.includes(item.id)).length;
+      const words = availableWords();
+      const vocabDone = words.filter(word => state.vocab.mastered.includes(word.id)).length;
+      const topics = availableSmallTalk();
+      const talkDone = topics.filter(topic => state.smalltalk.completedTopics.includes(topic.id)).length;
+      const exprs = availableExpressions();
+      const gachaDone = exprs.filter(expr => state.gacha.collected.includes(expr.id)).length;
+      const byDept = {
+        phonics: percent(phDone, phTotal),
+        vocab: percent(vocabDone, words.length),
+        smalltalk: percent(talkDone, topics.length),
+        gacha: percent(gachaDone, exprs.length)
+      };
+      return {
+        byDept,
+        overall: Math.round((byDept.phonics + byDept.vocab + byDept.smalltalk + byDept.gacha) / 4),
+        totals: {
+          phonics: [phDone, phTotal],
+          vocab: [vocabDone, words.length],
+          smalltalk: [talkDone, topics.length],
+          gacha: [gachaDone, exprs.length]
+        }
+      };
+    }
+
+    function rankName(score) {
+      if (score >= 80) return "星間大使";
+      if (score >= 55) return "上級通信士";
+      if (score >= 25) return "通信士";
+      return "見習い通信士";
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function speak(text, lang = "en-US") {
+      if (!("speechSynthesis" in window)) {
+        setFeedback("このブラウザでは音声再生に対応していません。", "bad");
+        return;
+      }
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = lang;
+      utterance.rate = 0.85;
+      utterance.pitch = 1;
+      const voices = window.speechSynthesis.getVoices();
+      const voice = voices.find(item => item.lang === lang) || voices.find(item => item.lang.startsWith("en"));
+      if (voice) utterance.voice = voice;
+      window.speechSynthesis.speak(utterance);
+    }
+
+    if ("speechSynthesis" in window) {
+      window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+    }
+
+    function setFeedback(message, tone = "") {
+      const activeView = document.querySelector(".view.active");
+      const node = activeView?.querySelector(".feedback") || document.querySelector(".feedback");
+      if (!node) return;
+      node.textContent = message;
+      node.className = `feedback ${tone}`.trim();
+    }
+
+    function shuffle(items) {
+      return [...items].sort(() => Math.random() - 0.5);
+    }
+
+    function updateStatus() {
+      const progress = getProgress();
+      document.getElementById("status-line").innerHTML = `
+        <span class="chip">学年 <strong>${state.gradeMode === "3-4" ? "3・4年" : "5・6年"}</strong></span>
+        <span class="chip">ランク <strong>${rankName(progress.overall)}</strong></span>
+        <span class="chip">確定した星 <strong>${progress.totals.vocab[0]}</strong></span>
+      `;
+      document.getElementById("rank-meter").style.setProperty("--value", `${progress.overall}%`);
+      document.getElementById("rank-percent").textContent = `${progress.overall}%`;
+      document.querySelectorAll("[data-grade]").forEach(button => {
+        button.classList.toggle("active", button.dataset.grade === state.gradeMode);
+      });
+    }
+
+    function setView(view) {
+      ui.activeView = view;
+      document.querySelectorAll(".view").forEach(node => node.classList.toggle("active", node.id === `view-${view}`));
+      document.querySelectorAll(".nav-button").forEach(button => button.classList.toggle("active", button.dataset.view === view));
+      render();
+    }
+
+    function render() {
+      updateStatus();
+      renderHome();
+      if (ui.activeView === "vocab") renderVocab();
+      if (ui.activeView === "gacha") renderGacha();
+      if (ui.activeView === "phonics") renderPhonics();
+      if (ui.activeView === "smalltalk") renderSmallTalk();
+    }
+
+    function renderHome() {
+      const progress = getProgress();
+      const cards = departments.map(dept => {
+        const total = progress.totals[dept.id];
+        return `
+          <button type="button" class="dept-card" data-go="${dept.id}" style="--accent:${dept.accent}">
+            <h3><span class="nav-mark" style="background:${dept.accent}">${dept.mark}</span>${dept.name}</h3>
+            <p>${dept.subtitle}</p>
+            <div class="progress-row">
+              <span class="mini-track"><span style="--value:${progress.byDept[dept.id]}%; background:${dept.accent}"></span></span>
+              <span>${total[0]}/${total[1]}</span>
+            </div>
+          </button>
+        `;
+      }).join("");
+
+      document.getElementById("view-home").innerHTML = `
+        <div class="home-grid">
+          <section class="panel command-panel">
+            <div class="command-title">
+              <div>
+                <h2>管制室</h2>
+                <p>通信士として4つの課を自由に行き来し、音・語彙・会話・表現を集めます。</p>
+              </div>
+              <span class="chip"><strong>${rankName(progress.overall)}</strong></span>
+            </div>
+            <div class="mission-board">${cards}</div>
+          </section>
+          <section class="panel star-map">
+            <div class="section-head">
+              <div>
+                <h2>自分の星図</h2>
+                <p>星図課で確定した単語が、本部の夜空にも反映されます。</p>
+              </div>
+            </div>
+            ${renderSkyMap()}
+            <div class="map-note">
+              <div class="stat-box"><b>${progress.totals.vocab[0]}</b><span>確定した星</span></div>
+              <div class="stat-box"><b>${state.vocab.categoriesComplete.length}</b><span>完成した星座</span></div>
+              <div class="stat-box"><b>${progress.totals.smalltalk[0]}</b><span>交信先の惑星</span></div>
+              <div class="stat-box"><b>${progress.totals.gacha[0]}</b><span>探査記録カード</span></div>
+            </div>
+          </section>
+        </div>
+      `;
+    }
+
+    function renderSkyMap() {
+      const categories = availableCategories();
+      const points = [
+        [[54, 78], [118, 48], [178, 104], [236, 72], [292, 124], [358, 86]],
+        [[76, 220], [132, 170], [198, 206], [260, 168], [326, 220], [390, 174]],
+        [[62, 348], [126, 312], [190, 354], [248, 304], [314, 344], [378, 300]],
+        [[450, 92], [520, 48], [584, 112], [646, 78], [708, 124], [760, 70]],
+        [[458, 252], [526, 204], [590, 262], [650, 218], [716, 270], [770, 226]],
+        [[452, 382], [516, 334], [580, 382], [642, 332], [708, 378], [764, 328]]
+      ];
+      const groups = categories.map((category, index) => {
+        const categoryPoints = points[index] || points[0];
+        const words = category.words;
+        const complete = words.every(word => state.vocab.mastered.includes(word.id));
+        const line = categoryPoints.map(point => point.join(",")).join(" ");
+        const circles = words.map((word, wordIndex) => {
+          const point = categoryPoints[wordIndex % categoryPoints.length];
+          const mastered = state.vocab.mastered.includes(word.id);
+          return `<circle cx="${point[0]}" cy="${point[1]}" r="${mastered ? 6 : 4}" fill="${mastered ? category.color : "rgba(244,247,251,0.22)"}" stroke="${mastered ? "#fff" : "rgba(244,247,251,0.25)"}" stroke-width="1">
+            <title>${escapeHtml(word.en)} ${mastered ? "習得済み" : "未習得"}</title>
+          </circle>`;
+        }).join("");
+        return `
+          <polyline points="${line}" fill="none" stroke="${complete ? category.color : "rgba(244,247,251,0.18)"}" stroke-width="${complete ? 2.5 : 1}" stroke-linecap="round" stroke-linejoin="round"/>
+          ${circles}
+          <text x="${categoryPoints[0][0] - 10}" y="${categoryPoints[0][1] - 16}" fill="${complete ? category.color : "rgba(244,247,251,0.55)"}" font-size="15" font-family="system-ui, sans-serif">${escapeHtml(category.label)}</text>
+        `;
+      }).join("");
+      return `<svg viewBox="0 0 820 450" role="img" aria-label="自分の星図">${groups}</svg>`;
+    }
+
+    function renderVocab() {
+      const categories = availableCategories();
+      if (!categories.some(category => category.id === ui.vocabCategory)) {
+        ui.vocabCategory = categories[0]?.id || "";
+        ui.vocabIndex = 0;
+      }
+      const category = categories.find(item => item.id === ui.vocabCategory);
+      const words = category ? category.words : [];
+      if (ui.vocabIndex >= words.length) ui.vocabIndex = 0;
+      const word = words[ui.vocabIndex];
+      const tabs = categories.map(item => `
+        <button type="button" class="${item.id === ui.vocabCategory ? "active" : ""}" data-vocab-category="${item.id}" style="--accent:${item.color}">${item.label}</button>
+      `).join("");
+      const card = ui.vocabMode === "flash" ? renderVocabFlash(word, category) : renderVocabQuiz(word, category);
+      const list = renderConstellationList(categories);
+
+      document.getElementById("view-vocab").innerHTML = `
+        <div class="section-head">
+          <div>
+            <h2>星図課</h2>
+            <p>絵と音から英単語を思い出し、2回連続でできた単語を確定した星にします。</p>
+          </div>
+          <div class="button-row">
+            <button type="button" class="${ui.vocabMode === "flash" ? "gold-button" : "secondary-button"}" data-vocab-mode="flash">フラッシュ</button>
+            <button type="button" class="${ui.vocabMode === "quiz" ? "gold-button" : "secondary-button"}" data-vocab-mode="quiz">星さがし</button>
+          </div>
+        </div>
+        <div class="toolbar"><div class="pill-tabs">${tabs}</div></div>
+        <div class="layout">
+          <section class="panel panel-pad">${card}</section>
+          <aside class="panel panel-pad">
+            <h3>星座リスト</h3>
+            <p>テーマごとに星の集まりができます。</p>
+            <div class="constellation-list">${list}</div>
+          </aside>
+        </div>
+      `;
+    }
+
+    function renderVocabFlash(word, category) {
+      if (!word) return `<p>この学年モードで使える単語がありません。</p>`;
+      const mastered = state.vocab.mastered.includes(word.id);
+      const streak = state.vocab.streaks[word.id] || 0;
+      return `
+        <div class="flash-card">
+          <div class="big-icon" style="border-color:${category.color}; color:${category.color}">${escapeHtml(word.icon)}</div>
+          <div>
+            <p class="word-ja">${escapeHtml(word.ja)}</p>
+            <h3 class="word-en">${ui.vocabRevealed ? escapeHtml(word.en) : "????"}</h3>
+            <p>${mastered ? "確定した星" : `連続 ${streak}/2`}</p>
+          </div>
+          <div class="button-row">
+            <button type="button" class="icon-button" data-speak="${escapeHtml(word.en)}" title="音声を聞く" aria-label="音声を聞く">▶</button>
+            <button type="button" class="gold-button" data-vocab-reveal>確認</button>
+            <button type="button" class="primary-button" data-vocab-known>合っていた</button>
+            <button type="button" class="secondary-button" data-vocab-next>次の星</button>
+          </div>
+          <div class="feedback" aria-live="polite"></div>
+        </div>
+      `;
+    }
+
+    function createVocabQuiz(word) {
+      const all = availableWords().filter(item => item.id !== word.id);
+      const choices = shuffle([word, ...shuffle(all).slice(0, 3)]);
+      ui.vocabQuiz = { answer: word.id, choices, selected: null };
+    }
+
+    function renderVocabQuiz(word, category) {
+      if (!word) return `<p>この学年モードで使える単語がありません。</p>`;
+      if (!ui.vocabQuiz || ui.vocabQuiz.answer !== word.id) createVocabQuiz(word);
+      const quiz = ui.vocabQuiz;
+      const choices = quiz.choices.map(choice => {
+        const selected = quiz.selected === choice.id;
+        const correct = selected && choice.id === quiz.answer;
+        const wrong = selected && choice.id !== quiz.answer;
+        return `
+          <button type="button" class="choice-button ${correct ? "correct" : ""} ${wrong ? "wrong" : ""}" data-vocab-choice="${choice.id}">
+            <span class="choice-icon">${escapeHtml(choice.icon)}</span>
+            <span>${escapeHtml(choice.ja)}</span>
+          </button>
+        `;
+      }).join("");
+      return `
+        <div class="flash-card">
+          <p class="word-ja">音を聞いて、合う絵を選びます。</p>
+          <button type="button" class="icon-button" data-speak="${escapeHtml(word.en)}" title="問題の音声を聞く" aria-label="問題の音声を聞く">▶</button>
+          <div class="quiz-grid">${choices}</div>
+          <div class="button-row">
+            <button type="button" class="secondary-button" data-vocab-new-quiz>もう一度</button>
+            <button type="button" class="gold-button" data-vocab-next>次の星</button>
+          </div>
+          <div class="feedback" aria-live="polite"></div>
+        </div>
+      `;
+    }
+
+    function renderConstellationList(categories) {
+      return categories.map(category => {
+        const done = category.words.filter(word => state.vocab.mastered.includes(word.id)).length;
+        const complete = done === category.words.length;
+        const dots = category.words.map(word => `<span class="star-dot ${state.vocab.mastered.includes(word.id) ? "on" : ""}"></span>`).join("");
+        return `
+          <div class="constellation-item ${complete ? "complete" : ""}">
+            <h4>${escapeHtml(category.label)}</h4>
+            <div class="progress-row">
+              <span class="mini-track"><span style="--value:${percent(done, category.words.length)}%; background:${category.color}"></span></span>
+              <span>${done}/${category.words.length}</span>
+            </div>
+            <div class="stars-inline" aria-hidden="true">${dots}</div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function markWord(wordId, correct) {
+      if (correct) {
+        const next = (state.vocab.streaks[wordId] || 0) + 1;
+        state.vocab.streaks[wordId] = next;
+        if (next >= 2) {
+          uniquePush(state.vocab.mastered, wordId);
+          setFeedback("星が確定しました。", "good");
+        } else {
+          setFeedback("受信成功。もう1回できると星が確定します。", "good");
+        }
+      } else {
+        state.vocab.streaks[wordId] = 0;
+        state.vocab.misses[wordId] = (state.vocab.misses[wordId] || 0) + 1;
+        setFeedback("まだ練習中の星です。もう一度聞いてみよう。", "bad");
+      }
+      updateVocabCompletions();
+      saveState();
+      updateStatus();
+    }
+
+    function updateVocabCompletions() {
+      vocabCategories.forEach(category => {
+        if (category.words.every(word => state.vocab.mastered.includes(word.id))) {
+          uniquePush(state.vocab.categoriesComplete, category.id);
+        }
+      });
+    }
+
+    function nextVocabWord() {
+      const category = availableCategories().find(item => item.id === ui.vocabCategory);
+      if (!category) return;
+      const prioritized = category.words
+        .map((word, index) => ({ word, index, score: state.vocab.mastered.includes(word.id) ? -1 : (state.vocab.misses[word.id] || 0) }))
+        .filter(item => item.index !== ui.vocabIndex);
+      const missed = prioritized.filter(item => item.score > 0).sort((a, b) => b.score - a.score)[0];
+      ui.vocabIndex = missed ? missed.index : (ui.vocabIndex + 1) % category.words.length;
+      ui.vocabRevealed = false;
+      ui.vocabQuiz = null;
+      renderVocab();
+    }
+
+    function renderGacha() {
+      const exprs = availableExpressions();
+      const last = ui.gachaLast || exprs.find(expr => state.gacha.collected.includes(expr.id)) || exprs[0];
+      const collected = exprs.filter(expr => state.gacha.collected.includes(expr.id));
+      const collection = exprs.map(expr => `
+        <div class="collection-item">
+          <span class="rarity ${expr.rarity}">${rarityLabel(expr.rarity)}</span>
+          <h4>${state.gacha.collected.includes(expr.id) ? escapeHtml(expr.en) : "未発見"}</h4>
+          <p>${state.gacha.collected.includes(expr.id) ? escapeHtml(expr.ja) : escapeHtml(expr.prompt)}</p>
+        </div>
+      `).join("");
+
+      document.getElementById("view-gacha").innerHTML = `
+        <div class="section-head">
+          <div>
+            <h2>表現探査課</h2>
+            <p>ワープ通信で表現カードを集め、場面に合う言い方を選びます。</p>
+          </div>
+          <span class="chip"><strong>${collected.length}</strong> / ${exprs.length} collected</span>
+        </div>
+        <div class="layout">
+          <section class="panel gacha-stage">
+            <div class="warp-dial ${ui.gachaSpinning ? "spin" : ""}" aria-hidden="true"><div class="warp-core">EX</div></div>
+            <button type="button" class="violet-button" data-gacha-draw>ワープ</button>
+            ${last ? renderExpressionCard(last) : ""}
+            <div class="feedback" aria-live="polite"></div>
+          </section>
+          <aside class="panel panel-pad">
+            <h3>探査記録</h3>
+            <p>集めた表現は図鑑に残ります。</p>
+            <div class="collection-grid">${collection}</div>
+          </aside>
+        </div>
+        <section class="panel panel-pad" style="margin-top:14px">
+          <h3>使ってみよう</h3>
+          ${renderSceneQuiz()}
+        </section>
+      `;
+    }
+
+    function rarityLabel(rarity) {
+      if (rarity === "super") return "SUPER";
+      if (rarity === "rare") return "RARE";
+      return "COMMON";
+    }
+
+    function renderExpressionCard(expr) {
+      return `
+        <article class="expression-card">
+          <span class="rarity ${expr.rarity}">${rarityLabel(expr.rarity)}</span>
+          <h3>${escapeHtml(expr.en)}</h3>
+          <p>${escapeHtml(expr.ja)}</p>
+          <p>${escapeHtml(expr.prompt)}</p>
+          <div class="button-row" style="justify-content:flex-start">
+            <button type="button" class="icon-button" data-speak="${escapeHtml(expr.en)}" title="音声を聞く" aria-label="音声を聞く">▶</button>
+          </div>
+        </article>
+      `;
+    }
+
+    function weightedExpression() {
+      const exprs = availableExpressions();
+      const weighted = exprs.flatMap(expr => {
+        const weight = expr.rarity === "common" ? 5 : expr.rarity === "rare" ? 3 : 1;
+        return Array.from({ length: weight }, () => expr);
+      });
+      const notCollected = exprs.filter(expr => !state.gacha.collected.includes(expr.id));
+      if (notCollected.length && Math.random() < 0.62) {
+        return notCollected[Math.floor(Math.random() * notCollected.length)];
+      }
+      return weighted[Math.floor(Math.random() * weighted.length)];
+    }
+
+    function ensureSceneQuiz() {
+      const exprs = availableExpressions();
+      const answer = exprs[Math.floor(Math.random() * exprs.length)];
+      const choices = shuffle([answer, ...shuffle(exprs.filter(expr => expr.id !== answer.id)).slice(0, 2)]);
+      ui.sceneQuiz = { answer: answer.id, prompt: answer.prompt, choices, selected: null };
+    }
+
+    function renderSceneQuiz() {
+      if (!ui.sceneQuiz) ensureSceneQuiz();
+      const quiz = ui.sceneQuiz;
+      const choices = quiz.choices.map(expr => {
+        const selected = quiz.selected === expr.id;
+        const correct = selected && expr.id === quiz.answer;
+        const wrong = selected && expr.id !== quiz.answer;
+        return `<button type="button" class="choice-button ${correct ? "correct" : ""} ${wrong ? "wrong" : ""}" data-scene-choice="${expr.id}">${escapeHtml(expr.en)}</button>`;
+      }).join("");
+      return `
+        <p><strong>${escapeHtml(quiz.prompt)}</strong></p>
+        <div class="quiz-grid">${choices}</div>
+        <div class="button-row" style="margin-top:10px; justify-content:flex-start">
+          <button type="button" class="secondary-button" data-scene-next>次の場面</button>
+        </div>
+        <div class="feedback" aria-live="polite"></div>
+      `;
+    }
+
+    function renderPhonics() {
+      const levels = [1, 2, 3].map(level => {
+        const locked = state.gradeMode === "3-4" && level > 1;
+        return `<button type="button" class="${ui.phonicsLevel === level ? "active" : ""}" data-phonics-level="${level}" ${locked ? "disabled" : ""}>Lv.${level}</button>`;
+      }).join("");
+      const items = availablePhonics().filter(item => item.level === ui.phonicsLevel);
+      if (!items.length && ui.phonicsLevel > 1) {
+        ui.phonicsLevel = 1;
+        return renderPhonics();
+      }
+      if (ui.phonicsIndex >= items.length) ui.phonicsIndex = 0;
+      const item = items[ui.phonicsIndex];
+      const tower = renderPhonicsTower();
+
+      document.getElementById("view-phonics").innerHTML = `
+        <div class="section-head">
+          <div>
+            <h2>電波解読課</h2>
+            <p>音を聞いて文字やパターンを選び、英語の信号に慣れます。</p>
+          </div>
+          <div class="pill-tabs">${levels}</div>
+        </div>
+        ${state.gradeMode === "3-4" ? `<div class="locked-note">3・4年モードでは Lv.1 を中心に練習します。Lv.2 以降は 5・6年モードで開放されます。</div>` : ""}
+        <div class="layout">
+          <section class="panel signal-console">${item ? renderSignalConsole(item, items) : ""}</section>
+          <aside class="panel panel-pad">
+            <h3>電波塔ランプ</h3>
+            <p>受信に成功した音が点灯します。</p>
+            <div class="phonics-grid">${tower}</div>
+          </aside>
+        </div>
+      `;
+    }
+
+    function createPhonicsQuiz(item, items) {
+      const choices = shuffle([item, ...shuffle(items.filter(candidate => candidate.id !== item.id)).slice(0, 3)]);
+      ui.phonicsQuiz = { answer: item.id, choices, selected: null };
+    }
+
+    function renderSignalConsole(item, items) {
+      if (!ui.phonicsQuiz || ui.phonicsQuiz.answer !== item.id) createPhonicsQuiz(item, items);
+      const quiz = ui.phonicsQuiz;
+      const choices = quiz.choices.map(choice => {
+        const selected = quiz.selected === choice.id;
+        const correct = selected && choice.id === quiz.answer;
+        const wrong = selected && choice.id !== quiz.answer;
+        return `<button type="button" class="choice-button ${correct ? "correct" : ""} ${wrong ? "wrong" : ""}" data-phonics-choice="${choice.id}">${escapeHtml(choice.pattern)}</button>`;
+      }).join("");
+      return `
+        <div class="signal-card">
+          <div class="signal-pattern">${escapeHtml(item.pattern)}</div>
+          <div class="ipa">${escapeHtml(item.ipa)}</div>
+          <p>${escapeHtml(item.example)}</p>
+        </div>
+        <div class="button-row">
+          <button type="button" class="icon-button" data-speak="${escapeHtml(item.sound)}" title="信号を聞く" aria-label="信号を聞く">▶</button>
+          <button type="button" class="signal-button" data-speak="${escapeHtml(item.example)}">単語で聞く</button>
+          <button type="button" class="secondary-button" data-phonics-next>次の信号</button>
+        </div>
+        <div class="quiz-grid">${choices}</div>
+        ${item.build ? renderWordBuilder(item) : ""}
+        <div class="feedback" aria-live="polite"></div>
+      `;
+    }
+
+    function renderWordBuilder(item) {
+      const tiles = shuffle(item.build.split("")).map((letter, index) => `<button type="button" class="letter-tile" data-letter="${letter}" data-tile-index="${index}">${letter}</button>`).join("");
+      return `
+        <div class="block-builder">
+          <strong>単語くみたて</strong>
+          <div class="build-target">${escapeHtml(ui.buildAnswer || "ここに文字を集める")}</div>
+          <div class="letter-builder">${tiles}</div>
+          <div class="button-row">
+            <button type="button" class="signal-button" data-build-check="${escapeHtml(item.build)}">確認</button>
+            <button type="button" class="secondary-button" data-build-clear>消す</button>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderPhonicsTower() {
+      return [1, 2, 3].map(level => {
+        const items = availablePhonics().filter(item => item.level === level);
+        if (!items.length) return "";
+        const done = items.filter(item => state.phonics.mastered.includes(item.id)).length;
+        const dots = items.map(item => `<span class="star-dot ${state.phonics.mastered.includes(item.id) ? "on" : ""}" title="${escapeHtml(item.pattern)}"></span>`).join("");
+        return `
+          <div class="phonics-item">
+            <h4>Lv.${level}</h4>
+            <div class="progress-row">
+              <span class="mini-track"><span style="--value:${percent(done, items.length)}%; background:var(--cyan)"></span></span>
+              <span>${done}/${items.length}</span>
+            </div>
+            <div class="stars-inline">${dots}</div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function nextPhonics() {
+      const items = availablePhonics().filter(item => item.level === ui.phonicsLevel);
+      ui.phonicsIndex = (ui.phonicsIndex + 1) % items.length;
+      ui.phonicsQuiz = null;
+      ui.buildAnswer = "";
+      renderPhonics();
+    }
+
+    function renderSmallTalk() {
+      const topics = availableSmallTalk();
+      if (!topics.some(topic => topic.id === ui.smallTalkTopic)) {
+        ui.smallTalkTopic = topics[0]?.id || "";
+        ui.selectedBlocks = {};
+      }
+      const topic = topics.find(item => item.id === ui.smallTalkTopic);
+      const topicButtons = topics.map(item => `
+        <button type="button" class="${item.id === ui.smallTalkTopic ? "active" : ""}" data-talk-topic="${item.id}">${item.label}</button>
+      `).join("");
+      const topicList = topics.map(item => {
+        const done = state.smalltalk.completedTopics.includes(item.id);
+        return `
+          <div class="topic-item">
+            <h4>${escapeHtml(item.planet)} ${done ? "交信済み" : ""}</h4>
+            <p>${escapeHtml(item.label)}</p>
+          </div>
+        `;
+      }).join("");
+
+      document.getElementById("view-smalltalk").innerHTML = `
+        <div class="section-head">
+          <div>
+            <h2>交信実践課</h2>
+            <p>モデル交信を聞き、ブロックを組み合わせて自分の返答を送ります。</p>
+          </div>
+          <div class="pill-tabs">${topicButtons}</div>
+        </div>
+        <div class="layout">
+          <section class="panel panel-pad">${topic ? renderTalkTopic(topic) : ""}</section>
+          <aside class="panel panel-pad">
+            <h3>交信先の惑星</h3>
+            <p>トピックを終えるごとに味方リストに追加されます。</p>
+            <div class="topic-grid">${topicList}</div>
+          </aside>
+        </div>
+      `;
+    }
+
+    function renderTalkTopic(topic) {
+      const lines = topic.exchange.map(line => `
+        <div class="dialogue-line">
+          <span class="speaker-badge">${escapeHtml(line.speaker)}</span>
+          <strong>${escapeHtml(line.en)}</strong>
+          <button type="button" class="icon-button" data-speak="${escapeHtml(line.en)}" aria-label="この英文を聞く">▶</button>
+        </div>
+      `).join("");
+      const blocks = Object.entries(topic.blocks).map(([group, options]) => `
+        <div class="block-group">
+          <strong>${escapeHtml(group)}</strong>
+          <div class="block-options">
+            ${options.map(option => `<button type="button" class="word-block ${ui.selectedBlocks[group] === option ? "active" : ""}" data-block-group="${escapeHtml(group)}" data-block-value="${escapeHtml(option)}">${escapeHtml(option)}</button>`).join("")}
+          </div>
+        </div>
+      `).join("");
+      const answer = Object.keys(topic.blocks).map(group => ui.selectedBlocks[group]).filter(Boolean).join(" ");
+      const reactionCards = reactions.map(text => `<button type="button" class="reaction-card" data-reaction="${escapeHtml(text)}">${escapeHtml(text)}</button>`).join("");
+      return `
+        <h3>${escapeHtml(topic.label)}</h3>
+        <p>${escapeHtml(topic.planet)} と交信します。</p>
+        <div class="line-stack" style="margin-top:12px">${lines}</div>
+        <div class="button-row" style="justify-content:flex-start; margin-top:10px">
+          <button type="button" class="warm-button" data-play-dialogue="${escapeHtml(topic.id)}">モデル交信を再生</button>
+        </div>
+        <div class="block-builder">
+          ${blocks}
+          <div class="answer-line">${escapeHtml(answer || "返答ブロックを選ぶ")}</div>
+          <div class="button-row" style="justify-content:flex-start">
+            <button type="button" class="warm-button" data-send-talk="${escapeHtml(topic.id)}">送信する</button>
+            <button type="button" class="secondary-button" data-clear-talk>消す</button>
+          </div>
+        </div>
+        <h3 style="margin-top:18px">つなぎの一言</h3>
+        <div class="reaction-row">${reactionCards}</div>
+        <div class="feedback" aria-live="polite"></div>
+      `;
+    }
+
+    function playDialogue(topic) {
+      if (!("speechSynthesis" in window)) return;
+      window.speechSynthesis.cancel();
+      topic.exchange.forEach((line, index) => {
+        window.setTimeout(() => speak(line.en), index * 2200);
+      });
+    }
+
+    function sendTalk(topic) {
+      const groups = Object.keys(topic.blocks);
+      const answer = groups.map(group => ui.selectedBlocks[group]).filter(Boolean).join(" ");
+      if (groups.some(group => !ui.selectedBlocks[group])) {
+        setFeedback("すべてのブロックを1つずつ選びます。", "bad");
+        return;
+      }
+      uniquePush(state.smalltalk.completedTopics, topic.id);
+      saveState();
+      speak(answer);
+      setFeedback(`${topic.planet} との交信に成功しました。`, "good");
+      updateStatus();
+      window.setTimeout(renderSmallTalk, 350);
+    }
+
+    function resetAll() {
+      const ok = window.confirm("この端末に保存された星間通信局の進捗をリセットします。よろしいですか？");
+      if (!ok) return;
+      localStorage.removeItem(STORAGE_KEY);
+      const next = loadState();
+      Object.keys(state).forEach(key => delete state[key]);
+      Object.assign(state, next);
+      ui.vocabIndex = 0;
+      ui.vocabRevealed = false;
+      ui.vocabQuiz = null;
+      ui.phonicsLevel = 1;
+      ui.phonicsIndex = 0;
+      ui.phonicsQuiz = null;
+      ui.selectedBlocks = {};
+      ui.gachaLast = null;
+      ui.sceneQuiz = null;
+      render();
+    }
+
+    document.addEventListener("click", event => {
+      const target = event.target.closest("button");
+      if (!target) return;
+
+      if (target.dataset.view) {
+        setView(target.dataset.view);
+        return;
+      }
+      if (target.dataset.go) {
+        setView(target.dataset.go);
+        return;
+      }
+      if (target.dataset.grade) {
+        state.gradeMode = target.dataset.grade;
+        saveState();
+        ui.vocabIndex = 0;
+        ui.vocabQuiz = null;
+        ui.phonicsLevel = state.gradeMode === "3-4" ? 1 : ui.phonicsLevel;
+        ui.phonicsIndex = 0;
+        ui.phonicsQuiz = null;
+        ui.selectedBlocks = {};
+        ui.sceneQuiz = null;
+        render();
+        return;
+      }
+      if (target.id === "reset-button") {
+        resetAll();
+        return;
+      }
+      if (target.dataset.speak) {
+        speak(target.dataset.speak);
+        return;
+      }
+
+      if (target.dataset.vocabCategory) {
+        ui.vocabCategory = target.dataset.vocabCategory;
+        ui.vocabIndex = 0;
+        ui.vocabRevealed = false;
+        ui.vocabQuiz = null;
+        renderVocab();
+        return;
+      }
+      if (target.dataset.vocabMode) {
+        ui.vocabMode = target.dataset.vocabMode;
+        ui.vocabQuiz = null;
+        renderVocab();
+        return;
+      }
+      if (target.hasAttribute("data-vocab-reveal")) {
+        ui.vocabRevealed = true;
+        renderVocab();
+        return;
+      }
+      if (target.hasAttribute("data-vocab-known")) {
+        const category = availableCategories().find(item => item.id === ui.vocabCategory);
+        const word = category.words[ui.vocabIndex];
+        markWord(word.id, true);
+        return;
+      }
+      if (target.hasAttribute("data-vocab-next")) {
+        nextVocabWord();
+        return;
+      }
+      if (target.hasAttribute("data-vocab-new-quiz")) {
+        ui.vocabQuiz = null;
+        renderVocab();
+        return;
+      }
+      if (target.dataset.vocabChoice) {
+        const correct = target.dataset.vocabChoice === ui.vocabQuiz.answer;
+        const answerId = ui.vocabQuiz.answer;
+        ui.vocabQuiz.selected = target.dataset.vocabChoice;
+        markWord(answerId, correct);
+        renderVocab();
+        const mastered = state.vocab.mastered.includes(answerId);
+        setFeedback(correct ? (mastered ? "星が確定しました。" : "受信成功。もう1回できると星が確定します。") : "まだ練習中の星です。もう一度聞いてみよう。", correct ? "good" : "bad");
+        return;
+      }
+
+      if (target.hasAttribute("data-gacha-draw")) {
+        ui.gachaSpinning = true;
+        renderGacha();
+        window.setTimeout(() => {
+          const expr = weightedExpression();
+          ui.gachaLast = expr;
+          ui.gachaSpinning = false;
+          uniquePush(state.gacha.collected, expr.id);
+          saveState();
+          renderGacha();
+          setFeedback(`${expr.en} を記録しました。`, "good");
+          speak(expr.en);
+        }, 850);
+        return;
+      }
+      if (target.dataset.sceneChoice) {
+        const correct = target.dataset.sceneChoice === ui.sceneQuiz.answer;
+        ui.sceneQuiz.selected = target.dataset.sceneChoice;
+        renderGacha();
+        setFeedback(correct ? "場面に合っています。" : "別の表現を探してみよう。", correct ? "good" : "bad");
+        return;
+      }
+      if (target.hasAttribute("data-scene-next")) {
+        ui.sceneQuiz = null;
+        renderGacha();
+        return;
+      }
+
+      if (target.dataset.phonicsLevel) {
+        ui.phonicsLevel = Number(target.dataset.phonicsLevel);
+        ui.phonicsIndex = 0;
+        ui.phonicsQuiz = null;
+        ui.buildAnswer = "";
+        renderPhonics();
+        return;
+      }
+      if (target.dataset.phonicsChoice) {
+        const correct = target.dataset.phonicsChoice === ui.phonicsQuiz.answer;
+        ui.phonicsQuiz.selected = target.dataset.phonicsChoice;
+        if (correct) {
+          uniquePush(state.phonics.mastered, ui.phonicsQuiz.answer);
+          saveState();
+        }
+        renderPhonics();
+        setFeedback(correct ? "信号を解読しました。" : "もう一度、音を聞いてみよう。", correct ? "good" : "bad");
+        updateStatus();
+        return;
+      }
+      if (target.hasAttribute("data-phonics-next")) {
+        nextPhonics();
+        return;
+      }
+      if (target.dataset.letter) {
+        ui.buildAnswer += target.dataset.letter;
+        renderPhonics();
+        return;
+      }
+      if (target.dataset.buildCheck) {
+        const correct = ui.buildAnswer === target.dataset.buildCheck;
+        if (correct) {
+          const items = availablePhonics().filter(item => item.level === ui.phonicsLevel);
+          const item = items[ui.phonicsIndex];
+          uniquePush(state.phonics.mastered, item.id);
+          saveState();
+        }
+        setFeedback(correct ? "単語くみたて成功。" : "文字の順番をもう一度見てみよう。", correct ? "good" : "bad");
+        updateStatus();
+        return;
+      }
+      if (target.hasAttribute("data-build-clear")) {
+        ui.buildAnswer = "";
+        renderPhonics();
+        return;
+      }
+
+      if (target.dataset.talkTopic) {
+        ui.smallTalkTopic = target.dataset.talkTopic;
+        ui.selectedBlocks = {};
+        renderSmallTalk();
+        return;
+      }
+      if (target.dataset.playDialogue) {
+        const topic = smallTalkTopics.find(item => item.id === target.dataset.playDialogue);
+        if (topic) playDialogue(topic);
+        return;
+      }
+      if (target.dataset.blockGroup) {
+        ui.selectedBlocks[target.dataset.blockGroup] = target.dataset.blockValue;
+        renderSmallTalk();
+        return;
+      }
+      if (target.dataset.sendTalk) {
+        const topic = smallTalkTopics.find(item => item.id === target.dataset.sendTalk);
+        if (topic) sendTalk(topic);
+        return;
+      }
+      if (target.hasAttribute("data-clear-talk")) {
+        ui.selectedBlocks = {};
+        renderSmallTalk();
+        return;
+      }
+      if (target.dataset.reaction) {
+        uniquePush(state.smalltalk.reactions, target.dataset.reaction);
+        saveState();
+        speak(target.dataset.reaction);
+        setFeedback(`${target.dataset.reaction} をストックしました。`, "good");
+      }
+    });
+
+    document.addEventListener("keydown", event => {
+      if (event.key === "Escape") {
+        window.speechSynthesis?.cancel();
+      }
+    });
+
+    render();
+  </script>
+</body>
+</html>
