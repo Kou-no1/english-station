@@ -1145,7 +1145,7 @@
       <section class="status-strip" aria-live="polite">
         <div class="status-line" id="status-line"></div>
         <div class="meter" aria-label="全体の通信ランク進捗">
-          <span>RANK</span>
+          <span>進捗</span>
           <span class="meter-track"><span class="meter-fill" id="rank-meter"></span></span>
           <span id="rank-percent">0%</span>
         </div>
@@ -1446,6 +1446,10 @@
       vocabRevealed: false,
       vocabAnswered: false,
       vocabRecent: [],
+      vocabVisited: [],
+      reviewQueue: [],
+      reviewing: false,
+      reviewFinished: false,
       vocabQuiz: null,
       phonicsLevel: 1,
       phonicsIndex: 0,
@@ -1472,7 +1476,7 @@
         rankHighWater: 0,
         settings: { rate: 0.85, subtitles: true, projection: false },
         phonics: { mastered: [] },
-        vocab: { mastered: [], streaks: {}, misses: {}, categoriesComplete: [] },
+        vocab: { mastered: [], streaks: {}, misses: {}, records: {}, categoriesComplete: [] },
         smalltalk: { completedTopics: [], reactions: [] },
         gacha: { collected: [] }
       };
@@ -1490,6 +1494,15 @@
       result.vocab.mastered = ids(parsed.vocab?.mastered, wordIds);
       result.vocab.streaks = counts(parsed.vocab?.streaks, wordIds);
       result.vocab.misses = counts(parsed.vocab?.misses, wordIds);
+      for (const id of wordIds) {
+        const record = parsed.vocab?.records?.[id];
+        if (record && typeof record === "object") {
+          const integer = (n, max) => Number.isFinite(n) && n >= 0 ? Math.min(max, Math.floor(n)) : 0;
+          result.vocab.records[id] = { box: integer(record.box, 5), correct: integer(record.correct, 100000), attempts: integer(record.attempts, 100000), lastSeenAt: integer(record.lastSeenAt, Date.now()), dueAt: integer(record.dueAt, Date.now() + 365 * 86400000) };
+        } else if (result.vocab.mastered.includes(id)) {
+          result.vocab.records[id] = { box: 1, correct: 2, attempts: 2, lastSeenAt: 0, dueAt: 0 };
+        }
+      }
       result.vocab.categoriesComplete = vocabCategories.filter(category => category.words.every(word => result.vocab.mastered.includes(word.id))).map(category => category.id);
       result.smalltalk.completedTopics = ids(parsed.smalltalk?.completedTopics, smallTalkTopics.map(topic => topic.id));
       result.smalltalk.reactions = ids(parsed.smalltalk?.reactions, reactions);
@@ -1531,6 +1544,17 @@
 
     function availableWords() {
       return availableCategories().flatMap(category => category.words.map(word => ({ ...word, categoryId: category.id })));
+    }
+
+    function dueWords(now = Date.now()) {
+      return availableWords().filter(word => state.vocab.records[word.id] && state.vocab.records[word.id].dueAt <= now).sort((a, b) => state.vocab.records[a.id].dueAt - state.vocab.records[b.id].dueAt);
+    }
+
+    function recordWordAttempt(wordId, correct, now = Date.now()) {
+      const previous = state.vocab.records[wordId] || { box: 0, correct: 0, attempts: 0 };
+      const box = correct ? Math.min(5, previous.box + 1) : 0;
+      const days = [0, 1, 3, 7, 14, 30];
+      state.vocab.records[wordId] = { box, correct: previous.correct + (correct ? 1 : 0), attempts: previous.attempts + 1, lastSeenAt: now, dueAt: now + (correct ? days[box] * 86400000 : 600000) };
     }
 
     function availablePhonics() {
@@ -1694,9 +1718,10 @@
 
     function updateStatus() {
       const progress = getProgress();
+      if (progress.overall > state.rankHighWater) { state.rankHighWater = progress.overall; saveState(); }
       document.getElementById("status-line").innerHTML = `
         <span class="chip">学年 <strong>${state.gradeMode === "3-4" ? "3・4年" : "5・6年"}</strong></span>
-        <span class="chip">ランク <strong>${rankName(progress.overall)}</strong></span>
+        <span class="chip">ランク <strong>${rankName(state.rankHighWater)}</strong></span>
         <span class="chip">確定した星 <strong>${progress.totals.vocab[0]}</strong></span>
       `;
       document.getElementById("rank-meter").style.setProperty("--value", `${progress.overall}%`);
@@ -1750,9 +1775,11 @@
                 <h2>管制室</h2>
                 <p>通信士として4つの課を自由に行き来し、音・語彙・会話・表現を集めます。</p>
               </div>
-              <span class="chip"><strong>${rankName(progress.overall)}</strong></span>
+              <span class="chip"><strong>${rankName(state.rankHighWater)}</strong></span>
             </div>
             <div class="mission-board">${cards}</div>
+            <div class="button-row" style="margin-top:14px"><button type="button" class="gold-button" data-start-review ${dueWords().length ? "" : "disabled"}>今日の復習 ${dueWords().length}語</button></div>
+            ${ui.reviewFinished ? `<p role="status">復習セットが終了しました。</p>` : ""}
           </section>
           <section class="panel star-map">
             <div class="section-head">
@@ -1806,6 +1833,10 @@
 
     function renderVocab() {
       const categories = availableCategories();
+      if (ui.reviewing && ui.reviewQueue.length) {
+        const reviewWord = availableWords().find(word => word.id === ui.reviewQueue[0]);
+        if (reviewWord) { ui.vocabCategory = reviewWord.categoryId; ui.vocabIndex = categories.find(category => category.id === reviewWord.categoryId).words.findIndex(word => word.id === reviewWord.id); }
+      }
       if (!categories.some(category => category.id === ui.vocabCategory)) {
         ui.vocabCategory = categories[0]?.id || "";
         ui.vocabIndex = 0;
@@ -1824,14 +1855,14 @@
         <div class="section-head">
           <div>
             <h2>星図課</h2>
-            <p>絵と音から英単語を思い出し、2回連続でできた単語を確定した星にします。</p>
+            <p>${ui.reviewing ? `今日の復習・残り ${ui.reviewQueue.length}語` : `獲得した星 ${state.vocab.mastered.length}・今日の復習 ${dueWords().length}語`}</p>
           </div>
           <div class="button-row">
             <button type="button" class="${ui.vocabMode === "flash" ? "gold-button" : "secondary-button"}" data-vocab-mode="flash">フラッシュ</button>
             <button type="button" class="${ui.vocabMode === "quiz" ? "gold-button" : "secondary-button"}" data-vocab-mode="quiz">星さがし</button>
           </div>
         </div>
-        <div class="toolbar"><div class="pill-tabs">${tabs}</div></div>
+        ${ui.reviewing ? `<div class="toolbar"><button type="button" class="secondary-button" data-end-review>復習を終える</button></div>` : `<div class="toolbar"><div class="pill-tabs">${tabs}</div></div>`}
         <div class="layout">
           <section class="panel panel-pad">${card}</section>
           <aside class="panel panel-pad">
@@ -1853,12 +1884,13 @@
           <div>
             <p class="word-ja">${escapeHtml(word.ja)}</p>
             <h3 class="word-en">${ui.vocabRevealed ? escapeHtml(word.en) : "????"}</h3>
-            <p>${mastered ? "確定した星" : `連続 ${streak}/2`}</p>
+            <p>${mastered ? "獲得した星" : `連続 ${streak}/2`}${state.vocab.records[word.id]?.dueAt <= Date.now() ? "・復習の星" : ""}</p>
           </div>
           <div class="button-row">
             <button type="button" class="icon-button" data-speak="${escapeHtml(word.en)}" title="音声を聞く" aria-label="音声を聞く">▶</button>
             <button type="button" class="gold-button" data-vocab-reveal>確認</button>
             <button type="button" class="primary-button" data-vocab-known ${!ui.vocabRevealed || ui.vocabAnswered ? "disabled" : ""}>合っていた</button>
+            <button type="button" class="secondary-button" data-vocab-unknown ${!ui.vocabRevealed || ui.vocabAnswered ? "disabled" : ""}>もう一度れんしゅう</button>
             <button type="button" class="secondary-button" data-vocab-next>次の星</button>
           </div>
           ${feedbackHtml()}
@@ -1920,6 +1952,7 @@
     }
 
     function markWord(wordId, correct) {
+      recordWordAttempt(wordId, correct);
       if (correct) {
         state.vocab.misses[wordId] = Math.max(0, (state.vocab.misses[wordId] || 0) - 1);
         const next = (state.vocab.streaks[wordId] || 0) + 1;
@@ -1949,12 +1982,25 @@
     }
 
     function nextVocabWord() {
+      if (ui.reviewing) {
+        ui.reviewQueue.shift();
+        ui.vocabQuiz = null;
+        ui.vocabRevealed = false;
+        ui.vocabAnswered = false;
+        delete ui.feedback["vocab:main"];
+        if (!ui.reviewQueue.length) { ui.reviewing = false; ui.reviewFinished = true; setView("home"); return; }
+        renderVocab();
+        return;
+      }
       const category = availableCategories().find(item => item.id === ui.vocabCategory);
       if (!category) return;
       ui.vocabRecent.push(category.words[ui.vocabIndex].id);
       ui.vocabRecent = ui.vocabRecent.slice(-2);
-      const candidates = category.words.map((word, index) => ({ word, index })).filter(item => !ui.vocabRecent.includes(item.word.id));
-      const next = shuffle(candidates)[0];
+      ui.vocabVisited.push(category.words[ui.vocabIndex].id);
+      let candidates = category.words.map((word, index) => ({ word, index })).filter(item => !ui.vocabVisited.includes(item.word.id));
+      if (!candidates.length) { ui.vocabVisited = [category.words[ui.vocabIndex].id]; candidates = category.words.map((word, index) => ({ word, index })).filter(item => !ui.vocabRecent.includes(item.word.id)); }
+      const urgency = word => (state.vocab.records[word.id]?.dueAt <= Date.now() ? 10 : 0) + (state.vocab.misses[word.id] || 0) * 2 + (state.vocab.mastered.includes(word.id) ? 0 : 1);
+      const next = shuffle(candidates).sort((a, b) => urgency(b.word) - urgency(a.word))[0];
       ui.vocabIndex = next ? next.index : (ui.vocabIndex + 1) % category.words.length;
       ui.vocabRevealed = false;
       ui.vocabAnswered = false;
@@ -2297,6 +2343,9 @@
       ui.vocabQuiz = null;
       ui.vocabAnswered = false;
       ui.vocabRecent = [];
+      ui.vocabVisited = [];
+      ui.reviewing = false;
+      ui.reviewQueue = [];
       ui.phonicsLevel = 1;
       ui.phonicsIndex = 0;
       ui.phonicsQuiz = null;
@@ -2332,6 +2381,9 @@
         ui.vocabRevealed = false;
         ui.vocabAnswered = false;
         ui.vocabRecent = [];
+        ui.vocabVisited = [];
+        ui.reviewing = false;
+        ui.reviewQueue = [];
         ui.buildId = "";
         ui.phonicsLevel = state.gradeMode === "3-4" ? 1 : ui.phonicsLevel;
         ui.phonicsIndex = 0;
@@ -2350,6 +2402,8 @@
         return;
       }
       if (target.dataset.signal) { playSignal(target.dataset.signal); return; }
+      if (target.hasAttribute("data-start-review")) { const due = dueWords(); if (!due.length) return; ui.reviewQueue = due.map(word => word.id); ui.reviewing = true; ui.reviewFinished = false; ui.vocabMode = "quiz"; ui.vocabQuiz = null; setView("vocab"); return; }
+      if (target.hasAttribute("data-end-review")) { ui.reviewing = false; ui.reviewQueue = []; renderVocab(); return; }
       if (target.hasAttribute("data-toggle-subtitles")) { state.settings.subtitles = !state.settings.subtitles; saveState(); render(); return; }
       if (target.dataset.phonicsMode) { stopAudio(); ui.phonicsMode = target.dataset.phonicsMode; renderPhonics(); return; }
 
@@ -2360,6 +2414,7 @@
         ui.vocabQuiz = null;
         ui.vocabAnswered = false;
         ui.vocabRecent = [];
+        ui.vocabVisited = [];
         renderVocab();
         return;
       }
@@ -2383,6 +2438,7 @@
         renderVocab();
         return;
       }
+      if (target.hasAttribute("data-vocab-unknown")) { if (!ui.vocabRevealed || ui.vocabAnswered) return; const category = availableCategories().find(item => item.id === ui.vocabCategory); ui.vocabAnswered = true; markWord(category.words[ui.vocabIndex].id, false); renderVocab(); return; }
       if (target.hasAttribute("data-vocab-next")) {
         nextVocabWord();
         return;

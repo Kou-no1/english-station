@@ -146,3 +146,31 @@ test('all phonics items have nonempty embedded RIFF audio', () => {
     assert.ok(bytes.length > 1000);
   }
 });
+
+test('review intervals grow on success and a miss retains the earned star', () => {
+  const f = fixture();
+  f.run('markWord("num_one",true);markWord("num_one",true)');
+  assert.equal(f.run('state.vocab.records.num_one.box'), 2);
+  assert.equal(f.run('state.vocab.mastered.includes("num_one")'), true);
+  f.run('markWord("num_one",false)');
+  assert.equal(f.run('state.vocab.records.num_one.box'), 0);
+  assert.equal(f.run('state.vocab.mastered.includes("num_one")'), true);
+  assert.equal(f.run('dueWords(Date.now()+600001).some(word=>word.id==="num_one")'), true);
+});
+
+test('scheduler covers the category before starting a new cycle', () => {
+  const f = fixture();
+  f.run('state.vocab.misses.num_one=10;state.vocab.misses.num_two=10');
+  const length = f.run('vocabCategories[0].words.length');
+  const seen = new Set([0]);
+  for (let index = 1; index < length; index++) { f.run('nextVocabWord()'); seen.add(f.run('ui.vocabIndex')); }
+  assert.equal(seen.size, length);
+});
+
+test('earned rank never drops when the grade mode changes', () => {
+  const f = fixture();
+  f.run('state.gradeMode="3-4";state.phonics.mastered=availablePhonics().map(x=>x.id);state.vocab.mastered=availableWords().map(x=>x.id);state.smalltalk.completedTopics=availableSmallTalk().map(x=>x.id);state.gacha.collected=availableExpressions().map(x=>x.id);updateStatus()');
+  assert.equal(f.run('rankName(state.rankHighWater)'), '星間大使');
+  f.click({ grade: '5-6' });
+  assert.equal(f.run('rankName(state.rankHighWater)'), '星間大使');
+});
