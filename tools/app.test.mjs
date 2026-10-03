@@ -36,7 +36,8 @@ function fixture(saved = null, denied = false, workspaceSaved = null) {
     run: code => vm.runInContext(code, context), node, timers, utterances, storage,
     click(dataset = {}, attributes = []) {
       listeners.click({ target: { closest: () => ({ dataset, hasAttribute: name => attributes.includes(name) }) } });
-    }
+    },
+    change(dataset, value) { return listeners.change({target:{dataset,value}}); }
   };
 }
 
@@ -469,4 +470,44 @@ test('lesson links omit existing URL query identifiers', () => {
   const link = f.run('packLink(defaultPack(),"https://example.test/english-station/?student_id=private&name=Ren")');
   assert.equal(new URL(link).search, '');
   assert.ok(!link.includes('private'));
+});
+
+test('learner controls disclose the answer and self-check in separate stages', () => {
+  const f = fixture();
+  f.run('ui.activeView="vocab";renderVocab()');
+  assert.ok(f.node('view-vocab').innerHTML.includes('data-vocab-reveal'));
+  assert.ok(!f.node('view-vocab').innerHTML.includes('data-vocab-known'));
+  f.click({}, ['data-vocab-reveal']);
+  assert.ok(f.node('view-vocab').innerHTML.includes('data-vocab-known'));
+  assert.ok(!f.node('view-vocab').innerHTML.includes('data-vocab-reveal'));
+  assert.ok(f.node('view-vocab').innerHTML.includes('data-topic-select="vocab"'));
+});
+
+test('topic selectors reset exercise state and reject unavailable topics', async () => {
+  const f = fixture();
+  f.run('ui.vocabRevealed=true;ui.vocabAnswered=true;ui.vocabIndex=3');
+  await f.change({topicSelect:'vocab'}, 'animals');
+  assert.equal(f.run('ui.vocabCategory'), 'animals');
+  assert.equal(f.run('ui.vocabIndex'), 0);
+  assert.equal(f.run('ui.vocabRevealed'), false);
+  assert.equal(f.run('ui.vocabAnswered'), false);
+  await f.change({topicSelect:'talk'}, 'shopping');
+  assert.equal(f.run('ui.smallTalkTopic'), 'shopping');
+  await f.change({topicSelect:'pair'}, 'shopping');
+  assert.notEqual(f.run('ui.pair.topic'), 'shopping');
+  await f.change({topicSelect:'sky'}, 'months');
+  assert.equal(f.run('ui.skyCategory'), 'months');
+  f.run('state.gradeMode="3-4";ui.vocabCategory="animals"');
+  await f.change({topicSelect:'vocab'}, 'months');
+  assert.equal(f.run('ui.vocabCategory'), 'animals');
+});
+
+test('all local UI assets and Lucide icons are bundled for offline use', () => {
+  const f = fixture();
+  assert.ok(f.run('icon("headphones")').includes('<path'));
+  for (const file of ['station.css','assets/guide.webp','assets/lucide-LICENSE']) assert.ok(fs.statSync(new URL(`../${file}`, import.meta.url)).size > 0);
+  const worker = fs.readFileSync(new URL('../sw.js', import.meta.url), 'utf8');
+  assert.ok(worker.includes('station.css'));
+  assert.ok(worker.includes('assets/guide.webp'));
+  assert.ok(!html.includes('<style>'));
 });

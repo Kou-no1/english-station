@@ -65,7 +65,7 @@ try {
       assert.deepEqual(layout.overflowing, [], `${view} buttons overflow at ${width}px`);
       if (width === 390) assert.ok(layout.contentY < 370, `${view} content starts too far down: ${layout.contentY}`);
       layouts.push(layout);
-      if (['home', 'vocab', 'smalltalk', 'pair', 'teacher'].includes(view)) {
+      if (['home', 'vocab', 'phonics', 'smalltalk', 'gacha', 'pair', 'teacher'].includes(view)) {
         const capture = await call('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
         fs.writeFileSync(path.join(screenshots, `${view}-${width}.png`), Buffer.from(capture.data, 'base64'));
       }
@@ -128,6 +128,18 @@ try {
     }
     await evaluate('document.querySelector("[data-mission-next]").click()');
   }
+  await evaluate('setView("vocab");document.querySelector("[data-vocab-mode=flash]").click();const themeSelect=document.querySelector("[data-topic-select=vocab]");themeSelect.value="animals";themeSelect.dispatchEvent(new Event("change",{bubbles:true}));true');
+  assert.equal(await evaluate('ui.vocabCategory'), 'animals');
+  assert.equal(await evaluate('document.querySelector("[data-vocab-known]")===null'), true);
+  await evaluate('document.querySelector("[data-vocab-reveal]").click()');
+  assert.equal(await evaluate('document.querySelector("[data-vocab-known]")!==null && document.querySelector("[data-vocab-reveal]")===null'), true);
+  assert.equal(await evaluate('document.querySelector("[data-vocab-known]").getBoundingClientRect().bottom<=innerHeight'), true, 'The vocabulary self-check should be visible on mobile without scrolling');
+  const revealCapture = await call('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
+  fs.writeFileSync(path.join(screenshots, 'vocab-revealed-mobile.png'), Buffer.from(revealCapture.data, 'base64'));
+  await evaluate('document.querySelector("[data-vocab-next]").click()');
+  assert.equal(await evaluate('ui.vocabRevealed'), false);
+  await evaluate('setView("smalltalk");const talkSelect=document.querySelector("[data-topic-select=talk]");talkSelect.value="shopping";talkSelect.dispatchEvent(new Event("change",{bubbles:true}));true');
+  assert.equal(await evaluate('ui.smallTalkTopic'), 'shopping');
   assert.equal(await evaluate('state.missions.completed'), 1);
   await evaluate('startPair();ui.pair.topic="likes";renderPair();document.querySelector("details").open=true;const field=document.querySelector("[data-personal=like]");field.value="curry";field.dispatchEvent(new Event("change",{bubbles:true}))');
   await until('state.personal.like==="curry"');
@@ -177,12 +189,12 @@ try {
   await until('audioOverrides.has("ph_a")');
   assert.equal(await evaluate('JSON.stringify({profiles:Object.keys(workspace.profiles),snapshots:workspace.snapshots.length,packs:workspace.packs.length,checks:workspace.audioChecks})'), advancedPersistence);
   const directory = path.dirname(htmlPath);
-  const allowedAssets = new Set(['index.html', 'sw.js', 'manifest.webmanifest', 'station.svg']);
+  const allowedAssets = new Set(['index.html', 'sw.js', 'station.css', 'assets/guide.webp', 'manifest.webmanifest', 'station.svg']);
   server = http.createServer((request, response) => {
     const pathname = new URL(request.url, 'http://localhost').pathname;
-    const filename = pathname === '/english-station/' ? 'index.html' : pathname.split('/').pop();
+    const filename = pathname === '/english-station/' ? 'index.html' : pathname.slice('/english-station/'.length);
     if (!pathname.startsWith('/english-station/') || !allowedAssets.has(filename)) { response.writeHead(404); response.end(); return; }
-    const mime = filename.endsWith('.js') ? 'application/javascript' : filename.endsWith('.svg') ? 'image/svg+xml' : filename.endsWith('.webmanifest') ? 'application/manifest+json' : 'text/html';
+    const mime = filename.endsWith('.js') ? 'application/javascript' : filename.endsWith('.css') ? 'text/css' : filename.endsWith('.webp') ? 'image/webp' : filename.endsWith('.svg') ? 'image/svg+xml' : filename.endsWith('.webmanifest') ? 'application/manifest+json' : 'text/html';
     response.writeHead(200, { 'Content-Type': `${mime};charset=utf-8` });
     response.end(fs.readFileSync(path.join(directory, filename)));
   });
@@ -202,6 +214,8 @@ try {
   await until(`performance.timeOrigin>${offlineNavigation} && document.readyState==="complete" && typeof ui!=="undefined" && document.getElementById("pack-dialog")?.open`);
   assert.equal(await evaluate('document.querySelector("h1").textContent'), '星間通信局');
   assert.equal(await evaluate('vocabCategories.flatMap(category=>category.words).length'), 200);
+  assert.equal(await evaluate('getComputedStyle(document.body).backgroundColor'), 'rgb(247, 249, 251)');
+  assert.equal(await evaluate('document.querySelector(".guide-header img").complete && document.querySelector(".guide-header img").naturalWidth>0'), true);
   await call('Network.emulateNetworkConditions', { offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
   assert.equal(errors.length, 0, errors.join('\n'));
   console.log(JSON.stringify({ passed: true, layouts, decodedAudio: audio.length, flows: ['keyboard focus', 'shopping conversation', 'star dialog', 'teacher settings', 'import preview and validation', 'single-flight gacha', 'scene mastery', 'reload persistence', 'younger grade', 'four-department mission', 'personal pair conversation', 'unified review', 'lesson pack save and share', 'profile switching', 'classroom batch import', 'print cards', 'audio replacement and persistence', 'shared lesson confirmation', 'offline reload'], screenshots }, null, 2));

@@ -1,6 +1,6 @@
-const CACHE = 'english-station-v3.1';
+const CACHE = 'english-station-v4-ui';
 const scope = new URL('./', self.location.href);
-const assets = ['index.html', 'manifest.webmanifest', 'station.svg'].map(path => new URL(path, scope).href);
+const assets = ['index.html', 'station.css', 'assets/guide.webp', 'manifest.webmanifest', 'station.svg'].map(path => new URL(path, scope).href);
 
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(assets)));
