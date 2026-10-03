@@ -1073,6 +1073,62 @@
         width: 100%;
       }
     }
+    .word-art { display: inline-block; line-height: 1.15; }
+    .choice-button:disabled { opacity: 1; }
+    .main-nav { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+    .brand h1 { font-size: 26px; }
+    .section-head h2, .command-title h2 { font-size: 26px; }
+    .expression-card h3 { font-size: 28px; overflow-wrap: anywhere; }
+    .word-en { font-size: 52px; overflow-wrap: anywhere; }
+    .big-icon { font-size: 96px; color: var(--text); }
+    .signal-pattern { font-size: 72px; }
+    .segmented button, .pill-tabs button, .word-block { min-height: 44px; }
+    #save-notice { color: var(--gold); }
+    @media (max-width: 980px) {
+      .app-header { grid-template-columns: 1fr auto; }
+      .status-strip { grid-column: 1 / -1; grid-row: 2; }
+      .top-actions { grid-column: 2; grid-row: 1; }
+      .status-line { flex-wrap: nowrap; }
+      .status-strip .chip { width: auto; min-height: 30px; font-size: 12px; padding: 3px 8px; }
+      .nav-button { grid-template-columns: 1fr; justify-items: center; padding: 7px 3px; gap: 5px; min-height: 76px; text-align: center; }
+      .nav-title { font-size: 12px; }
+      .nav-sub { display: none; }
+      .nav-mark { height: 28px; width: 28px; font-size: 12px; }
+      .main-nav { gap: 5px; }
+      .star-map { min-height: 0; }
+    }
+    @media (max-width: 620px) {
+      .app-header { display: flex; flex-wrap: wrap; gap: 9px; padding-bottom: 8px; }
+      .brand { width: 100%; }
+      .brand h1 { font-size: 23px; }
+      .top-actions { width: 100%; order: 1; }
+      .segmented { width: auto; min-width: 160px; }
+      .status-strip { width: 100%; order: 2; gap: 4px; }
+      .meter { grid-template-columns: 42px 1fr 40px; }
+      .main-nav { grid-template-columns: repeat(5, minmax(0, 1fr)); margin-bottom: 12px; }
+      .mission-board, .quiz-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .dept-card { min-height: 154px; padding: 9px; }
+      .dept-card h3 { font-size: 14px; flex-wrap: wrap; }
+      .dept-card p { font-size: 12px; }
+      .command-panel { min-height: 0; padding: 12px; }
+      .command-title { display: block; }
+      .command-title > .chip { display: none; }
+      .command-title p { font-size: 14px; }
+      .section-head h2, .command-title h2 { font-size: 22px; }
+      .section-head p { font-size: 14px; }
+      .panel-pad { padding: 12px; }
+      .flash-card { min-height: 290px; padding: 12px; }
+      .big-icon { width: 120px; height: 120px; font-size: 76px; }
+      .word-en { font-size: 36px; }
+      .signal-pattern { font-size: 52px; }
+      .signal-console { min-height: 0; }
+      .star-map svg { min-height: 200px; }
+      .toolbar .pill-tabs { gap: 5px; }
+      .pill-tabs button { font-size: 13px; padding: 6px 8px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+    }
   </style>
 </head>
 <body>
@@ -1100,6 +1156,7 @@
           <button type="button" id="grade-34" data-grade="3-4">3・4年</button>
           <button type="button" id="grade-56" data-grade="5-6">5・6年</button>
         </div>
+        <button type="button" class="icon-button" data-toggle-subtitles title="字幕" aria-label="字幕を切り替える">文</button>
         <button type="button" class="icon-button" id="reset-button" title="進捗をリセット" aria-label="進捗をリセット">↻</button>
       </div>
     </header>
@@ -1136,7 +1193,7 @@
       <section class="view" id="view-gacha"></section>
     </main>
 
-    <p class="footer-note">音声はブラウザの Web Speech API を使います。進捗はこの端末の localStorage に保存されます。</p>
+    <p class="footer-note">記録はこの端末に残ります。</p>
   </div>
 
   <script>
@@ -1182,8 +1239,8 @@
         words: [
           { id: "num_one", en: "one", ja: "1", icon: "1" },
           { id: "num_two", en: "two", ja: "2", icon: "2" },
-          { id: "color_red", en: "red", ja: "赤", icon: "■" },
-          { id: "color_blue", en: "blue", ja: "青", icon: "■" },
+          { id: "color_red", en: "red", ja: "あか", icon: "■", color: "#f04a58" },
+          { id: "color_blue", en: "blue", ja: "あお", icon: "■", color: "#4292f5" },
           { id: "shape_circle", en: "circle", ja: "円", icon: "○" },
           { id: "shape_star", en: "star", ja: "星", icon: "☆" }
         ]
@@ -1194,12 +1251,12 @@
         grade: ["3-4", "5-6"],
         color: "#f6c65b",
         words: [
-          { id: "animal_dog", en: "dog", ja: "犬", icon: "犬" },
-          { id: "animal_cat", en: "cat", ja: "猫", icon: "猫" },
-          { id: "animal_panda", en: "panda", ja: "パンダ", icon: "熊" },
-          { id: "animal_bird", en: "bird", ja: "鳥", icon: "鳥" },
-          { id: "animal_elephant", en: "elephant", ja: "ぞう", icon: "象" },
-          { id: "animal_rabbit", en: "rabbit", ja: "うさぎ", icon: "兎" }
+          { id: "animal_dog", en: "dog", ja: "いぬ", icon: "🐶" },
+          { id: "animal_cat", en: "cat", ja: "ねこ", icon: "🐱" },
+          { id: "animal_panda", en: "panda", ja: "パンダ", icon: "🐼" },
+          { id: "animal_bird", en: "bird", ja: "とり", icon: "🐦" },
+          { id: "animal_elephant", en: "elephant", ja: "ぞう", icon: "🐘" },
+          { id: "animal_rabbit", en: "rabbit", ja: "うさぎ", icon: "🐰" }
         ]
       },
       {
@@ -1208,12 +1265,12 @@
         grade: ["3-4", "5-6"],
         color: "#ff9278",
         words: [
-          { id: "food_apple", en: "apple", ja: "りんご", icon: "林" },
-          { id: "food_rice", en: "rice", ja: "ごはん", icon: "米" },
-          { id: "food_pizza", en: "pizza", ja: "ピザ", icon: "PZ" },
-          { id: "food_milk", en: "milk", ja: "牛乳", icon: "乳" },
-          { id: "food_bread", en: "bread", ja: "パン", icon: "B" },
-          { id: "food_curry", en: "curry", ja: "カレー", icon: "C" }
+          { id: "food_apple", en: "apple", ja: "りんご", icon: "🍎" },
+          { id: "food_rice", en: "rice", ja: "ごはん", icon: "🍚" },
+          { id: "food_pizza", en: "pizza", ja: "ピザ", icon: "🍕" },
+          { id: "food_milk", en: "milk", ja: "ぎゅうにゅう", icon: "🥛" },
+          { id: "food_bread", en: "bread", ja: "パン", icon: "🍞" },
+          { id: "food_curry", en: "curry", ja: "カレー", icon: "🍛" }
         ]
       },
       {
@@ -1222,12 +1279,12 @@
         grade: ["5-6"],
         color: "#79dfa7",
         words: [
-          { id: "school_math", en: "math", ja: "算数", icon: "数" },
-          { id: "school_music", en: "music", ja: "音楽", icon: "♪" },
-          { id: "school_pe", en: "P.E.", ja: "体育", icon: "PE" },
-          { id: "school_library", en: "library", ja: "図書室", icon: "本" },
-          { id: "school_science", en: "science", ja: "理科", icon: "理" },
-          { id: "school_english", en: "English", ja: "英語", icon: "英" }
+          { id: "school_math", en: "math", ja: "さんすう", icon: "🧮" },
+          { id: "school_music", en: "music", ja: "おんがく", icon: "🎵" },
+          { id: "school_pe", en: "P.E.", ja: "たいいく", icon: "🏃" },
+          { id: "school_library", en: "library", ja: "としょしつ", icon: "📚" },
+          { id: "school_science", en: "science", ja: "りか", icon: "🔬" },
+          { id: "school_english", en: "English", ja: "えいご", icon: "🔤" }
         ]
       },
       {
@@ -1236,12 +1293,12 @@
         grade: ["5-6"],
         color: "#bf9cff",
         words: [
-          { id: "town_station", en: "station", ja: "駅", icon: "駅" },
-          { id: "town_park", en: "park", ja: "公園", icon: "公" },
-          { id: "town_hospital", en: "hospital", ja: "病院", icon: "病" },
-          { id: "world_japan", en: "Japan", ja: "日本", icon: "日" },
-          { id: "world_brazil", en: "Brazil", ja: "ブラジル", icon: "BR" },
-          { id: "world_australia", en: "Australia", ja: "オーストラリア", icon: "AU" }
+          { id: "town_station", en: "station", ja: "えき", icon: "🚉" },
+          { id: "town_park", en: "park", ja: "こうえん", icon: "🏞️" },
+          { id: "town_hospital", en: "hospital", ja: "びょういん", icon: "🏥" },
+          { id: "world_japan", en: "Japan", ja: "にほん", icon: "🇯🇵" },
+          { id: "world_brazil", en: "Brazil", ja: "ブラジル", icon: "🇧🇷" },
+          { id: "world_australia", en: "Australia", ja: "オーストラリア", icon: "🇦🇺" }
         ]
       },
       {
@@ -1250,12 +1307,12 @@
         grade: ["3-4", "5-6"],
         color: "#9fd7ff",
         words: [
-          { id: "act_run", en: "run", ja: "走る", icon: "走" },
-          { id: "act_read", en: "read", ja: "読む", icon: "読" },
-          { id: "act_sleep", en: "sleep", ja: "寝る", icon: "眠" },
-          { id: "feel_happy", en: "happy", ja: "うれしい", icon: "笑" },
-          { id: "feel_sad", en: "sad", ja: "悲しい", icon: "涙" },
-          { id: "feel_hungry", en: "hungry", ja: "お腹がすいた", icon: "腹" }
+          { id: "act_run", en: "run", ja: "はしる", icon: "🏃" },
+          { id: "act_read", en: "read", ja: "よむ", icon: "📖" },
+          { id: "act_sleep", en: "sleep", ja: "ねる", icon: "😴" },
+          { id: "feel_happy", en: "happy", ja: "うれしい", icon: "😄" },
+          { id: "feel_sad", en: "sad", ja: "かなしい", icon: "😢" },
+          { id: "feel_hungry", en: "hungry", ja: "おなかがすいた", icon: "🤤" }
         ]
       }
     ];
@@ -1613,6 +1670,28 @@
       return result;
     }
 
+    function wordArt(word) {
+      return `<span class="word-art" ${word.color ? `style="color:${word.color}"` : ""} aria-hidden="true">${escapeHtml(word.icon)}</span>`;
+    }
+
+    function choiceCaption(text) {
+      if (state.gradeMode === "5-6" || state.settings.subtitles) return text;
+      const captions = { "I": "わたしは", "like": "すき", "Hello.": "こんにちは", "Hi.": "やあ", "Good morning.": "おはよう", "I'm Sora.": "ソラ", "I'm Mina.": "ミナ", "I'm Ren.": "レン", "Nice to meet you.": "はじめまして", "How about you?": "きみは？", "Me too!": "わたしも！", "That's nice.": "いいね", "Really?": "ほんとう？", "Good idea.": "いいかんがえ", "I see.": "なるほど", "soccer.": "サッカー", "apples.": "りんご", "music.": "おんがく" };
+      return captions[text] || availableWords().find(word => word.en === text.replace(/[.!?]$/, ""))?.ja || text;
+    }
+
+    function renderInto(id, markup) {
+      const container = document.getElementById(id);
+      const focused = document.activeElement;
+      const key = focused && container.contains?.(focused) ? JSON.stringify(focused.dataset) : null;
+      container.innerHTML = markup;
+      if (key) {
+        const buttons = [...container.querySelectorAll("button")];
+        const replacement = buttons.find(button => !button.disabled && JSON.stringify(button.dataset) === key) || buttons.find(button => !button.disabled && (button.hasAttribute("data-vocab-next") || button.hasAttribute("data-phonics-next")));
+        replacement?.focus({ preventScroll: true });
+      }
+    }
+
     function updateStatus() {
       const progress = getProgress();
       document.getElementById("status-line").innerHTML = `
@@ -1624,7 +1703,9 @@
       document.getElementById("rank-percent").textContent = `${progress.overall}%`;
       document.querySelectorAll("[data-grade]").forEach(button => {
         button.classList.toggle("active", button.dataset.grade === state.gradeMode);
+        button.setAttribute("aria-pressed", String(button.dataset.grade === state.gradeMode));
       });
+      document.querySelectorAll("[data-toggle-subtitles]").forEach(button => button.setAttribute("aria-pressed", String(state.settings.subtitles)));
     }
 
     function setView(view) {
@@ -1632,7 +1713,7 @@
       cancelWarp();
       ui.activeView = view;
       document.querySelectorAll(".view").forEach(node => node.classList.toggle("active", node.id === `view-${view}`));
-      document.querySelectorAll(".nav-button").forEach(button => button.classList.toggle("active", button.dataset.view === view));
+      document.querySelectorAll(".nav-button").forEach(button => { button.classList.toggle("active", button.dataset.view === view); if (button.dataset.view === view) button.setAttribute("aria-current", "page"); else button.removeAttribute("aria-current"); });
       render();
     }
 
@@ -1661,7 +1742,7 @@
         `;
       }).join("");
 
-      document.getElementById("view-home").innerHTML = `
+      renderInto("view-home", `
         <div class="home-grid">
           <section class="panel command-panel">
             <div class="command-title">
@@ -1689,7 +1770,7 @@
             </div>
           </section>
         </div>
-      `;
+      `);
     }
 
     function renderSkyMap() {
@@ -1739,7 +1820,7 @@
       const card = ui.vocabMode === "flash" ? renderVocabFlash(word, category) : renderVocabQuiz(word, category);
       const list = renderConstellationList(categories);
 
-      document.getElementById("view-vocab").innerHTML = `
+      renderInto("view-vocab", `
         <div class="section-head">
           <div>
             <h2>星図課</h2>
@@ -1759,7 +1840,7 @@
             <div class="constellation-list">${list}</div>
           </aside>
         </div>
-      `;
+      `);
     }
 
     function renderVocabFlash(word, category) {
@@ -1768,7 +1849,7 @@
       const streak = state.vocab.streaks[word.id] || 0;
       return `
         <div class="flash-card">
-          <div class="big-icon" style="border-color:${category.color}; color:${category.color}">${escapeHtml(word.icon)}</div>
+          <div class="big-icon" style="border-color:${category.color}">${wordArt(word)}</div>
           <div>
             <p class="word-ja">${escapeHtml(word.ja)}</p>
             <h3 class="word-en">${ui.vocabRevealed ? escapeHtml(word.en) : "????"}</h3>
@@ -1800,9 +1881,9 @@
         const correct = selected && choice.id === quiz.answer;
         const wrong = selected && choice.id !== quiz.answer;
         return `
-          <button type="button" class="choice-button ${correct ? "correct" : ""} ${wrong ? "wrong" : ""}" data-vocab-choice="${choice.id}" ${quiz.selected ? "disabled" : ""}>
-            <span class="choice-icon">${escapeHtml(choice.icon)}</span>
-            <span>${escapeHtml(choice.ja)}</span>
+          <button type="button" class="choice-button ${correct ? "correct" : ""} ${wrong ? "wrong" : ""}" aria-label="${escapeHtml(choice.ja)}" data-vocab-choice="${choice.id}" ${quiz.selected ? "disabled" : ""}>
+            <span class="choice-icon">${wordArt(choice)}</span>
+            ${state.gradeMode === "5-6" ? `<span>${escapeHtml(choice.ja)}</span>` : ""}
           </button>
         `;
       }).join("");
@@ -1894,7 +1975,7 @@
         </div>
       `).join("");
 
-      document.getElementById("view-gacha").innerHTML = `
+      renderInto("view-gacha", `
         <div class="section-head">
           <div>
             <h2>表現探査課</h2>
@@ -1919,20 +2000,20 @@
           <h3>使ってみよう</h3>
           ${renderSceneQuiz()}
         </section>
-      `;
+      `);
     }
 
     function rarityLabel(rarity) {
-      if (rarity === "super") return "SUPER";
-      if (rarity === "rare") return "RARE";
-      return "COMMON";
+      if (rarity === "super") return "スーパーレア";
+      if (rarity === "rare") return "レア";
+      return "コモン";
     }
 
     function renderExpressionCard(expr) {
       return `
         <article class="expression-card">
           <span class="rarity ${expr.rarity}">${rarityLabel(expr.rarity)}</span>
-          <h3>${escapeHtml(expr.en)}</h3>
+          <h3>${escapeHtml(state.settings.subtitles ? expr.en : expr.ja)}</h3>
           <p>${escapeHtml(expr.ja)}</p>
           <p>${escapeHtml(expr.prompt)}</p>
           <div class="button-row" style="justify-content:flex-start">
@@ -1995,7 +2076,7 @@
       const item = items[ui.phonicsIndex];
       const tower = renderPhonicsTower();
 
-      document.getElementById("view-phonics").innerHTML = `
+      renderInto("view-phonics", `
         <div class="section-head">
           <div>
             <h2>電波解読課</h2>
@@ -2012,7 +2093,7 @@
             <div class="phonics-grid">${tower}</div>
           </aside>
         </div>
-      `;
+      `);
     }
 
     function createPhonicsQuiz(item, items) {
@@ -2111,7 +2192,7 @@
         `;
       }).join("");
 
-      document.getElementById("view-smalltalk").innerHTML = `
+      renderInto("view-smalltalk", `
         <div class="section-head">
           <div>
             <h2>交信実践課</h2>
@@ -2127,27 +2208,27 @@
             <div class="topic-grid">${topicList}</div>
           </aside>
         </div>
-      `;
+      `);
     }
 
     function renderTalkTopic(topic) {
       const lines = topic.exchange.map(line => `
         <div class="dialogue-line">
           <span class="speaker-badge">${escapeHtml(line.speaker)}</span>
-          <strong>${escapeHtml(line.en)}</strong>
+          <strong>${state.settings.subtitles ? escapeHtml(line.en) : escapeHtml(line.speaker === "A" ? "はなしかける" : "こたえる")}</strong>
           <button type="button" class="icon-button" data-speak="${escapeHtml(line.en)}" aria-label="この英文を聞く">▶</button>
         </div>
       `).join("");
       const blocks = Object.entries(topic.blocks).map(([group, options]) => `
         <div class="block-group">
-          <strong>${escapeHtml(group)}</strong>
+          <strong>${escapeHtml({ greeting: "あいさつ", name: "なまえ", closing: "さいごに", subject: "だれ", verb: "すること", topic: "すきなもの", bridge: "ききかえす", time: "じこく", answer: "こたえ", detail: "くわしく", phrase: "なりたい", job: "しごと" }[group] || group)}</strong>
           <div class="block-options">
-            ${options.map(option => `<button type="button" class="word-block ${ui.selectedBlocks[group] === option ? "active" : ""}" data-block-group="${escapeHtml(group)}" data-block-value="${escapeHtml(option)}">${escapeHtml(option)}</button>`).join("")}
+            ${options.map(option => `<button type="button" class="word-block ${ui.selectedBlocks[group] === option ? "active" : ""}" aria-pressed="${ui.selectedBlocks[group] === option}" data-block-group="${escapeHtml(group)}" data-block-value="${escapeHtml(option)}">${escapeHtml(choiceCaption(option))}</button>`).join("")}
           </div>
         </div>
       `).join("");
       const answer = Object.keys(topic.blocks).map(group => ui.selectedBlocks[group]).filter(Boolean).join(" ");
-      const reactionCards = reactions.map(text => `<button type="button" class="reaction-card" data-reaction="${escapeHtml(text)}">${escapeHtml(text)}</button>`).join("");
+      const reactionCards = reactions.map(text => `<button type="button" class="reaction-card" data-reaction="${escapeHtml(text)}">${escapeHtml(choiceCaption(text))}</button>`).join("");
       return `
         <h3>${escapeHtml(topic.label)}</h3>
         <p>${escapeHtml(topic.planet)} と交信します。</p>
@@ -2157,7 +2238,7 @@
         </div>
         <div class="block-builder">
           ${blocks}
-          <div class="answer-line">${escapeHtml(answer || "返答ブロックを選ぶ")}</div>
+          <div class="answer-line">${escapeHtml(answer ? Object.keys(topic.blocks).map(group => ui.selectedBlocks[group]).filter(Boolean).map(choiceCaption).join(" ") : "へんとう")}</div>
           <div class="button-row" style="justify-content:flex-start">
             <button type="button" class="warm-button" data-send-talk="${escapeHtml(topic.id)}">送信する</button>
             <button type="button" class="secondary-button" data-clear-talk>消す</button>
@@ -2244,6 +2325,7 @@
         stopAudio();
         cancelWarp();
         state.gradeMode = target.dataset.grade;
+        state.settings.subtitles = state.gradeMode === "5-6";
         saveState();
         ui.vocabIndex = 0;
         ui.vocabQuiz = null;
@@ -2268,6 +2350,7 @@
         return;
       }
       if (target.dataset.signal) { playSignal(target.dataset.signal); return; }
+      if (target.hasAttribute("data-toggle-subtitles")) { state.settings.subtitles = !state.settings.subtitles; saveState(); render(); return; }
       if (target.dataset.phonicsMode) { stopAudio(); ui.phonicsMode = target.dataset.phonicsMode; renderPhonics(); return; }
 
       if (target.dataset.vocabCategory) {
