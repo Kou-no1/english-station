@@ -34,8 +34,8 @@ JSONで記録を書き出し、別端末に読み込めます。読み込みは�
 Node.jsの標準機能だけを使用します。
 
 ```powershell
-node --test interstellar-english/tools/app.test.mjs
-node interstellar-english/tools/browser.test.mjs
+node --test tools/app.test.mjs
+node tools/browser.test.mjs
 ```
 
 ブラウザ検証にはローカルChromeを使用します。別の場所にある場合は`CHROME_PATH`を設定します。
@@ -45,7 +45,7 @@ node interstellar-english/tools/browser.test.mjs
 教材のIPAを変更した場合の音声再生成はWindowsで実行します。
 
 ```powershell
-node interstellar-english/tools/build-audio.mjs
+node tools/build-audio.mjs
 ```
 
 生成時だけWindowsのSystem.Speechとインストール済みのen-US音声が必要です。
