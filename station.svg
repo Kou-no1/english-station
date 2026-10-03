@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
+  <rect width="192" height="192" rx="24" fill="#101820"/>
+  <path d="m96 23 15 40 42 2-33 26 12 40-36-24-36 24 12-40-33-26 42-2Z" fill="#f6c65b"/>
+  <circle cx="96" cy="81" r="12" fill="#101820"/>
+  <path d="M42 148h108" stroke="#55d7ee" stroke-width="8"/>
+  <text x="96" y="174" text-anchor="middle" font-family="sans-serif" font-weight="700" font-size="20" fill="#f4f7fb">ISC</text>
+</svg>

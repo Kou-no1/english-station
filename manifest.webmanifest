@@ -1,0 +1,12 @@
+{
+  "id": "./",
+  "name": "星間通信局",
+  "short_name": "星間通信局",
+  "lang": "ja",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#101820",
+  "theme_color": "#101820",
+  "icons": [{ "src": "./station.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}
